@@ -1,0 +1,85 @@
+{{define "content"}}
+<div class="page-heading">
+  <div class="breadcrumb">
+    <a href="{{.PanelPath}}/subscriptions">{{template "icon-back"}}Clients</a>
+    <span>/</span>
+    <h1>{{if .IsNew}}New client{{else}}{{.Subscription.Name}}{{end}}</h1>
+  </div>
+</div>
+
+<form method="post" data-dirty-form
+      action="{{.PanelPath}}/subscriptions{{if not .IsNew}}/{{.Subscription.ID}}{{end}}">
+  <!-- Enter in the name field saves rather than running an optional JSON tool. -->
+  <button type="submit" name="action" value="save" hidden></button>
+  <div class="client-fields">
+    <div class="name-field">
+      <label for="subscription-name">Name</label>
+      <input id="subscription-name" name="name" value="{{.Subscription.Name}}" maxlength="255" autocomplete="off" placeholder="e.g. Personal laptop">
+    </div>
+    <label class="checkbox-field">
+      <input type="checkbox" name="enabled" value="1" {{if .Subscription.Enabled}}checked{{end}}>
+      Enabled
+    </label>
+  </div>
+
+  {{if not .IsNew}}
+  <div class="url-row">
+    <label for="subscription-url">Subscription URL</label>
+    <div class="url-copy">
+      <input id="subscription-url" class="url-field" readonly value="{{subscriptionURL .Subscription.Token}}">
+      <button type="button" class="button" data-copy="{{subscriptionURL .Subscription.Token}}">{{template "icon-copy"}}Copy URL</button>
+    </div>
+  </div>
+  {{end}}
+
+  <details class="advanced-settings"{{if or .Error .FinalJSON (ne .Subscription.OverrideJSON "{}")}} open{{end}}>
+    <summary>Configuration override <span class="hint">Optional</span></summary>
+    <section class="editor" aria-labelledby="override-label">
+      <div class="editor-heading">
+        <label id="override-label" for="override-json">Override JSON</label>
+        <div class="toolbar">
+          <button type="submit" name="action" value="format" class="button">{{template "icon-format"}}Format</button>
+          <button type="submit" name="action" value="validate" class="button">{{template "icon-validate"}}Validate</button>
+          <button type="submit" name="action" value="preview" class="button">{{template "icon-preview"}}Preview</button>
+        </div>
+      </div>
+      <textarea id="override-json" name="override_json" class="code-input" required
+                spellcheck="false" autocapitalize="off" autocomplete="off"
+                aria-describedby="override-help">{{.Subscription.OverrideJSON}}</textarea>
+      <div class="editor-help" id="override-help">Optional settings for this client. Leave <code>{}</code> to use the shared config.
+        Arrays are appended and your rules go before shared ones. Add only exceptions; don't reuse shared tags.
+      </div>
+    </section>
+  </details>
+  <div class="form-actions">
+    <button type="submit" name="action" value="save" class="button primary">{{if .IsNew}}{{template "icon-plus"}}Create client{{else}}{{template "icon-save"}}Save{{end}}</button>
+    <a class="button" href="{{.PanelPath}}/subscriptions">{{template "icon-cancel"}}Cancel</a>
+  </div>
+</form>
+
+{{if .FinalJSON}}
+<section class="preview" aria-labelledby="preview-title">
+  <div class="editor-heading"><h2 id="preview-title">Final JSON</h2></div>
+  <pre tabindex="0">{{.FinalJSON}}</pre>
+</section>
+{{end}}
+
+{{if not .IsNew}}
+<div class="client-actions">
+  <a class="text-link" href="{{.PanelPath}}/subscriptions/{{.Subscription.ID}}/preview"
+     target="_blank" rel="noopener noreferrer">{{template "icon-external"}}Open saved JSON</a>
+  <div class="row-actions">
+    {{if .Managed}}
+    <form method="post" action="{{.PanelPath}}/subscriptions/{{.Subscription.ID}}/regenerate-token"
+          data-confirm="Reset access and the subscription URL? The old URL stops working; send the client the new one.">
+      <button class="button" type="submit">{{template "icon-key"}}Reset credentials</button>
+    </form>
+    {{end}}
+    <form method="post" action="{{.PanelPath}}/subscriptions/{{.Subscription.ID}}/delete"
+          data-confirm="Delete this client permanently? Access will be revoked and the subscription URL will stop working.">
+      <button class="button danger" type="submit">{{template "icon-delete"}}Delete client</button>
+    </form>
+  </div>
+</div>
+{{end}}
+{{end}}

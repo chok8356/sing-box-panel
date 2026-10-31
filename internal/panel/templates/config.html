@@ -1,0 +1,44 @@
+{{define "content"}}
+<div class="page-heading">
+  <div>
+    <h1>Client config</h1>
+    <p class="page-description">The shared foundation for every client.</p>
+  </div>
+  <button type="button" id="load-preset" class="button" aria-haspopup="dialog" aria-controls="preset-dialog">{{template "icon-download"}}Load a client preset</button>
+</div>
+
+<dialog id="preset-dialog" class="preset-dialog" aria-labelledby="preset-title">
+  <div class="dialog-heading">
+    <h2 id="preset-title">Load a client preset</h2>
+    <button type="button" class="button dialog-close" data-close-preset aria-label="Close preset dialog">{{template "icon-cancel"}}</button>
+  </div>
+  <form method="post" action="{{.PanelPath}}/config" class="preset-form">
+    <div class="field"><label for="preset">Routing</label><select id="preset" name="preset" autofocus><option value="proxy">All traffic through proxy</option><option value="russia">Russia directly, other traffic through proxy</option></select><p class="hint">Local networks always go direct. Direct traffic is visible to your provider.</p></div>
+    <label class="checkbox-field"><input type="checkbox" name="block_ads" value="1">Block ads</label>
+    <p class="hint">Replaces the editor contents. Clients change only after Save.</p>
+    <div class="toolbar dialog-actions">
+      <button type="button" class="button" data-close-preset>{{template "icon-cancel"}}Cancel</button>
+      <button type="submit" name="action" value="preset" class="button primary">{{template "icon-download"}}Load into editor</button>
+    </div>
+  </form>
+</dialog>
+
+<form method="post" action="{{.PanelPath}}/config" class="full-height-form" data-dirty-form>
+  <section class="editor" aria-labelledby="base-label">
+    <div class="editor-heading">
+      <label id="base-label" for="base-json">Base JSON</label>
+      <div class="toolbar">
+        <button type="submit" name="action" value="format" class="button">{{template "icon-format"}}Format</button>
+        <button type="submit" name="action" value="validate" class="button">{{template "icon-validate"}}Validate</button>
+        <button type="submit" name="action" value="save" class="button primary">{{template "icon-save"}}Save</button>
+      </div>
+    </div>
+    <textarea id="base-json" name="base_json" class="code-input base-input" required
+              spellcheck="false" autocapitalize="off" autocomplete="off"
+              aria-describedby="base-help">{{.BaseJSON}}</textarea>
+    <div class="editor-help" id="base-help">
+      Outbounds for server inbounds and the <code>proxy</code> selector are added automatically.
+    </div>
+  </section>
+</form>
+{{end}}

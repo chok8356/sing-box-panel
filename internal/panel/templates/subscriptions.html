@@ -1,0 +1,41 @@
+{{define "content"}}
+<div class="page-heading">
+  <div>
+    <h1>Clients <span class="count">{{len .Subscriptions}}</span></h1>
+    <p class="page-description">Manage access and share subscription links.</p>
+  </div>
+  {{if .Unconfigured}}<a class="button primary" href="{{.PanelPath}}/server">{{template "icon-server"}}Set up server</a>{{else}}<a class="button primary" href="{{.PanelPath}}/subscriptions/new">{{template "icon-plus"}}New client</a>{{end}}
+</div>
+
+<div class="table-wrap">
+  <table class="clients-table">
+    {{if .Subscriptions}}
+    <thead>
+      <tr>
+        <th scope="col">Name</th>
+        <th scope="col">Status</th>
+        <th scope="col"><span class="sr-only">Actions</span></th>
+      </tr>
+    </thead>
+    {{end}}
+    <tbody>
+      {{range .Subscriptions}}
+      <tr>
+        <td><a class="client-name" href="{{$.PanelPath}}/subscriptions/{{.ID}}">{{.Name}}</a></td>
+        <td>
+          {{if .Enabled}}<span class="badge enabled">Enabled</span>{{else}}<span class="badge disabled">Disabled</span>{{end}}
+        </td>
+        <td>
+          <div class="row-actions">
+            <button type="button" class="button" data-copy="{{subscriptionURL .Token}}" aria-label="Copy URL for {{.Name}}">{{template "icon-copy"}}<span class="action-label">Copy URL</span></button>
+            <a class="button" href="{{$.PanelPath}}/subscriptions/{{.ID}}" aria-label="Edit {{.Name}}">{{template "icon-edit"}}<span class="action-label">Edit</span></a>
+          </div>
+        </td>
+      </tr>
+      {{else}}
+      <tr><td colspan="3" class="empty-state"><span class="empty-icon">{{template "icon-users"}}</span><strong>No clients yet</strong>{{if .Unconfigured}}<p>Set up your server, choose a client config, then create your first client.</p><a class="text-link" href="{{.PanelPath}}/server">{{template "icon-server"}}Set up server</a>{{else}}<p>Create your first client, then share their subscription link.</p><a class="text-link" href="{{.PanelPath}}/subscriptions/new">{{template "icon-plus"}}Create a client</a>{{end}}</td></tr>
+      {{end}}
+    </tbody>
+  </table>
+</div>
+{{end}}

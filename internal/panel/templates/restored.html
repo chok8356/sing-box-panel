@@ -1,0 +1,11 @@
+{{define "content"}}
+<div class="login-heading">
+  <h1>Backup restored</h1>
+  <p class="page-description">Clients and settings were restored. All admin sessions have ended.</p>
+</div>
+<div class="login-form">
+  <p class="hint">Use the username <strong>{{.RestoredUsername}}</strong> and the password saved in this backup.</p>
+  <a class="text-link restored-url" href="{{.RestoredURL}}">{{.RestoredURL}}</a>
+  <a class="button primary" href="{{.RestoredURL}}">{{template "icon-login"}}Sign in to the restored panel</a>
+</div>
+{{end}}

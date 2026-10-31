@@ -1,0 +1,19 @@
+{{define "content"}}
+<div class="login-heading">
+  <a class="brand" href="{{.PanelPath}}/login">{{template "brand-mark"}}<span>sing-box <span class="brand-caption">panel</span></span></a>
+  <h1>Sign in</h1>
+  <p class="page-description">Manage your server and client subscriptions.</p>
+</div>
+<form method="post" action="{{.PanelPath}}/login" class="login-form">
+  <div class="field">
+    <label for="username">Username</label>
+    <input id="username" name="username" autocomplete="username" autocapitalize="off" spellcheck="false" required>
+  </div>
+  <div class="field">
+    <label for="password">Password</label>
+    <input id="password" name="password" type="password" autocomplete="current-password" required>
+  </div>
+  <button type="submit" class="button primary">{{template "icon-login"}}Sign in</button>
+  <p class="hint">You stay signed in for 7 days. Sign out when using a shared computer.</p>
+</form>
+{{end}}

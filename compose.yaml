@@ -1,0 +1,66 @@
+# Local preview: the panel with a real sing-box, as on a server.
+#
+#   docker compose up --build    start
+#   docker compose watch         start and rebuild automatically when Go code changes
+#   docker compose down -v       stop and delete the preview data
+#
+# Templates, CSS and JS are read from internal/panel on every request:
+# edit them and refresh the browser, no rebuild needed.
+#
+# Open https://localhost:8443/panel/ — login admin / test. The certificate is
+# self-signed, so the browser warns once. Data survives restarts in a volume.
+name: sing-box-panel
+
+services:
+  panel:
+    build:
+      context: .
+      dockerfile_inline: |
+        FROM golang:1.26 AS build
+        WORKDIR /src
+        COPY go.mod go.sum ./
+        RUN go mod download
+        COPY cmd cmd
+        COPY internal internal
+        RUN CGO_ENABLED=0 go build -o /sing-box-panel ./cmd/sing-box-panel
+
+        FROM debian:bookworm-slim
+        ARG TARGETARCH
+        ARG SING_BOX_VERSION=1.14.4
+        ADD https://github.com/SagerNet/sing-box/releases/download/v$${SING_BOX_VERSION}/sing-box-$${SING_BOX_VERSION}-linux-$${TARGETARCH}.tar.gz /tmp/sing-box.tar.gz
+        RUN tar -xzf /tmp/sing-box.tar.gz -C /usr/local/bin --strip-components=1 \
+              sing-box-$${SING_BOX_VERSION}-linux-$${TARGETARCH}/sing-box && rm /tmp/sing-box.tar.gz
+        COPY --from=build /sing-box-panel /usr/local/bin/
+    environment:
+      DATABASE_PATH: /data/panel.db
+      RUNTIME_DIR: /data/runtime
+      CERT_DIR: /data/certs
+      SING_BOX_BINARY: /usr/local/bin/sing-box
+      PANEL_PATH: /panel
+      SUBSCRIPTION_PATH: /sub
+      ADMIN_USERNAME: admin
+      ADMIN_PASSWORD: test
+      PANEL_DEV_ASSETS: /dev-assets
+    # setup only fills an empty database, so restarts keep your changes.
+    command: >-
+      sh -c "sing-box-panel setup --database /data/panel.db --address 127.0.0.1
+      --panel-port 8443 && exec sing-box-panel"
+    ports:
+      - "8443:8443"   # panel
+      - "18443:18443" # proxy
+      - "9443:9443"   # spare port to try a panel port change in Settings
+    volumes:
+      - preview-data:/data
+      - ./internal/panel:/dev-assets:ro
+    develop:
+      watch:
+        - action: rebuild
+          path: ./internal
+          ignore:
+            - panel/templates/
+            - panel/static/
+        - action: rebuild
+          path: ./cmd
+
+volumes:
+  preview-data:

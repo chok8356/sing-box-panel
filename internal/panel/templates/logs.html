@@ -1,0 +1,17 @@
+{{define "content"}}
+<div class="page-heading">
+  <div>
+    <h1>Server logs</h1>
+    <p class="page-description">Recent activity and configuration errors.</p>
+  </div>
+  <div class="log-toolbar">
+    <label><input type="checkbox" id="logs-live" checked>Live</label>
+    <button type="button" class="button" id="logs-refresh">{{template "icon-refresh"}}Refresh</button>
+    <button type="button" class="button" data-copy-target="#server-logs" data-copy-label="Logs copied">{{template "icon-copy"}}Copy</button>
+  </div>
+</div>
+
+<p id="logs-error" class="message error" role="alert" hidden></p>
+<pre id="server-logs" class="log-output" tabindex="0"
+     data-logs-url="{{.PanelPath}}/logs?format=text">{{.Logs}}</pre>
+{{end}}

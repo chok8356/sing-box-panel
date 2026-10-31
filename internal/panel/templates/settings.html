@@ -1,0 +1,140 @@
+{{define "content"}}
+<div class="page-heading">
+  <div>
+    <h1>Settings</h1>
+    <p class="page-description">Connection, admin access and backups.</p>
+  </div>
+</div>
+
+{{with .Settings}}
+{{if .OnPending}}
+<form method="post" action="{{$.PanelPath}}/settings/confirm-port" class="message notice">
+  The panel now also answers on port {{.PendingPort}}. Keep it?
+  Without confirmation it returns to port {{.PanelPort}} in 2 minutes.
+  <button type="submit" class="button primary">{{template "icon-validate"}}Keep port {{.PendingPort}}</button>
+</form>
+{{else if .PendingPort}}
+<div class="message notice">
+  Port {{.PendingPort}} is waiting for confirmation. Open this page on port {{.PendingPort}} to keep it.
+</div>
+{{end}}
+
+<form method="post" action="{{$.PanelPath}}/settings" class="settings-section">
+  <header class="section-heading"><h2>Connection</h2></header>
+  <div class="field">
+    <label for="address">Address</label>
+    <input id="address" name="address" value="{{.Address}}" required autocomplete="off" spellcheck="false" aria-describedby="address-help">
+    <p class="hint" id="address-help">Domain or IP that clients and subscription links use.</p>
+  </div>
+  <div class="field">
+    <label for="panel-port">Panel port</label>
+    <input id="panel-port" name="panel_port" type="number" min="1" max="65535" value="{{.PanelPort}}" required aria-describedby="port-help">
+    <p class="hint" id="port-help">A new port must be confirmed by opening the panel on it.</p>
+  </div>
+  <div class="field">
+    <label for="tls-mode">HTTPS certificate</label>
+    <select id="tls-mode" name="tls_mode" aria-describedby="tls-mode-help"><option value="auto" {{if eq .TLSMode "auto"}}selected{{end}}>Automatic (Let's Encrypt)</option><option value="existing" {{if eq .TLSMode "existing"}}selected{{end}}>Existing certificate files</option></select>
+    <p class="hint" id="tls-mode-help">Automatic needs TCP 80 open for issuance and renewal.</p>
+  </div>
+  <div class="field tls-file">
+    <label for="tls-cert-file">Certificate chain PEM path</label>
+    <input id="tls-cert-file" name="tls_cert_file" value="{{.TLSCertFile}}" autocomplete="off" spellcheck="false" aria-describedby="tls-files-help">
+  </div>
+  <div class="field tls-file">
+    <label for="tls-key-file">Private key PEM path</label>
+    <input id="tls-key-file" name="tls_key_file" value="{{.TLSKeyFile}}" autocomplete="off" spellcheck="false" aria-describedby="tls-files-help">
+    <p class="hint" id="tls-files-help">Absolute paths outside /root and /home; the certificate must cover the address.</p>
+  </div>
+  <div class="toolbar">
+    <button type="submit" class="button primary">{{template "icon-save"}}Save</button>
+  </div>
+</form>
+
+<section class="settings-section" aria-labelledby="certificate-title">
+  {{with .Certificate}}
+  <header class="section-heading">
+    <h2 id="certificate-title">Certificate</h2>
+    <span class="badge {{if .Ready}}enabled{{else}}disabled{{end}}">{{if .Ready}}HTTPS ready{{else if .Checking}}Checking certificate{{else}}HTTPS needs attention{{end}}</span>
+  </header>
+  <dl class="certificate-details">
+    <dt>Management</dt><dd>{{.Mode}}</dd>
+    <dt>Address</dt><dd>{{.Address}}</dd>
+    {{if .Issuer}}<dt>Issuer</dt><dd>{{.Issuer}}</dd>{{end}}
+    {{if .Expires}}<dt>Expires (UTC)</dt><dd>{{.Expires}}</dd>{{end}}
+    {{if .LastAttempt}}<dt>Last check (UTC)</dt><dd>{{.LastAttempt}}</dd>{{end}}
+  </dl>
+  {{if .Error}}<p class="message error" role="alert">{{.Error}}</p>{{end}}
+  {{if not .Ready}}<p class="hint">Self-signed: browsers warn and remote subscriptions may fail.</p><code class="fingerprint">{{.Fingerprint}}</code>{{end}}
+  {{if eq .Mode "External"}}<p class="hint">Renewed by your own tool; checked every 15 minutes.</p>{{end}}
+  {{end}}
+  <details class="hint">
+    <summary>Use in sing-box inbounds</summary>
+    TLS inbounds (Trojan, Hysteria2, TUIC, Naive, AnyTLS, VLESS/VMess with TLS) can reuse this certificate. sing-box restarts on renewal.
+    <code class="fingerprint">"certificate_path": "{{.CertPath}}",<br>"key_path": "{{.KeyPath}}"</code>
+  </details>
+  <form method="post" action="{{$.PanelPath}}/settings/certificate/retry" class="toolbar"><button type="submit" class="button">{{template "icon-refresh"}}{{if .Automatic}}Retry certificate{{else}}Reload certificate{{end}}</button></form>
+</section>
+
+<section class="settings-section" aria-labelledby="ports-title">
+  <header class="section-heading">
+    <h2 id="ports-title">Firewall ports</h2>
+    <p class="page-description">Allow these in the server and provider firewalls.</p>
+  </header>
+  <table class="ports-table">
+    <thead><tr><th scope="col">Port</th><th scope="col">Protocol</th><th scope="col">Used by</th></tr></thead>
+    <tbody>
+      {{range .Ports}}
+      <tr><td>{{.Port}}</td><td>{{.Network}}</td><td>{{.Tag}} ({{.Type}})</td></tr>
+      {{end}}
+    </tbody>
+  </table>
+</section>
+
+<section class="settings-section" aria-labelledby="signin-title">
+  <header class="section-heading">
+    <h2 id="signin-title">Sign-in</h2>
+    <p class="page-description">Saving signs out every admin session.</p>
+  </header>
+  <form method="post" action="{{$.PanelPath}}/settings/access" class="access-form">
+    <div class="field"><label for="admin-username">Username</label><input id="admin-username" name="admin_username" value="{{.AdminUsername}}" maxlength="128" autocomplete="username" spellcheck="false" autocapitalize="off" required></div>
+    <div class="field"><label for="new-password">New password</label><input id="new-password" name="new_password" type="password" autocomplete="new-password" placeholder="Unchanged" aria-describedby="new-password-help"><p class="hint" id="new-password-help">12–72 bytes.</p></div>
+    <div class="field"><label for="confirm-password">Confirm new password</label><input id="confirm-password" name="confirm_password" type="password" autocomplete="new-password"></div>
+    <div class="field"><label for="current-password">Current password</label><input id="current-password" name="current_password" type="password" autocomplete="current-password" required></div>
+    <div class="toolbar"><button type="submit" class="button primary">{{template "icon-save"}}Save and sign out</button></div>
+  </form>
+</section>
+
+<section class="settings-section" aria-labelledby="urls-title">
+  <header class="section-heading">
+    <h2 id="urls-title">Panel URLs</h2>
+    <p class="page-description">Saving signs out every admin session.</p>
+  </header>
+  <form method="post" action="{{$.PanelPath}}/settings/access" class="access-form">
+    <div class="field"><label for="panel-path">Panel path</label><input id="panel-path" name="panel_path" value="{{.PanelPath}}" autocomplete="off" spellcheck="false" aria-describedby="panel-path-help"><p class="hint" id="panel-path-help">/ for the root. The old path stops working.</p></div>
+    <div class="field"><label for="subscription-path">Subscription path</label><input id="subscription-path" name="subscription_path" value="{{.SubscriptionPath}}" autocomplete="off" spellcheck="false" required aria-describedby="subscription-path-help"><p class="hint" id="subscription-path-help">Changing it breaks every client's subscription URL.</p>
+      <label class="checkbox-field"><input type="checkbox" name="confirm_subscription_path" value="1">I will send clients new URLs</label></div>
+    <div class="field"><label for="urls-password">Current password</label><input id="urls-password" name="current_password" type="password" autocomplete="current-password" required></div>
+    <div class="toolbar"><button type="submit" class="button primary">{{template "icon-save"}}Save and sign out</button></div>
+  </form>
+</section>
+
+<section class="settings-section" aria-labelledby="backup-title">
+  <header class="section-heading">
+    <h2 id="backup-title">Backup and restore</h2>
+    <p class="page-description">Clients, configurations and panel settings. Backups contain access secrets; keep them private.</p>
+  </header>
+  <form method="post" action="{{$.PanelPath}}/settings/backup" class="toolbar"><button type="submit" class="button">{{template "icon-download"}}Download backup</button></form>
+  <form method="post" action="{{$.PanelPath}}/settings/restore" enctype="multipart/form-data" class="access-form restore-form" data-confirm="Replace all clients and settings with this backup? The address, port and login will return to the saved values, and all admin sessions will end.">
+    <input type="hidden" name="confirm_restore" value="0" data-confirmation>
+    <div class="field"><label for="restore-file">Backup file (.db, up to 64 MiB)</label><input id="restore-file" name="backup" type="file" accept=".db" required></div>
+    <div class="field"><label for="restore-password">Current password</label><input id="restore-password" name="current_password" type="password" autocomplete="current-password" required></div>
+    <details class="hint">
+      <summary>Details</summary>
+      Certificates are not included. The current state is saved first to backups/before-restore-*.db next to the database.
+      Restoring may restart sing-box. Over SSH: <code>sbp restore /path/to/backup.db</code>.
+    </details>
+    <div class="toolbar"><button type="submit" class="button danger">{{template "icon-upload"}}Restore backup and sign out</button></div>
+  </form>
+</section>
+{{end}}
+{{end}}

@@ -1,0 +1,8 @@
+/data/
+/dist/
+/.env
+*.db
+*.db-shm
+*.db-wal
+/.dev-certs/
+/compose.override.yaml

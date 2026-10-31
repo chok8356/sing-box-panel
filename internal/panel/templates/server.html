@@ -1,0 +1,50 @@
+{{define "content"}}
+<div class="page-heading">
+  <div>
+    <h1>Server config</h1>
+    <p class="page-description">Configure inbounds and connection protocols.</p>
+  </div>
+  {{if .Running}}<span class="badge enabled">Running</span>{{else}}<span class="badge disabled">Stopped</span>{{end}}
+</div>
+
+{{if .RuntimeError}}<div class="message error" role="alert">{{.RuntimeError}}</div>{{end}}
+{{if not .Managed}}
+<div class="message error">
+  sing-box management is off. Set SING_BOX_BINARY to your sing-box executable to run the server.
+</div>
+{{end}}
+
+{{if .Unconfigured}}
+<section class="settings-section setup-section" aria-labelledby="setup-title">
+  <header class="section-heading">
+    <h2 id="setup-title">Set up your server</h2>
+    <p class="page-description">Start with VLESS + Reality, or apply your own server JSON below.</p>
+  </header>
+  <form method="post" action="{{.PanelPath}}/server/create-reality" class="setup-form">
+    <div class="field"><label for="vpn-port">Proxy port</label><input id="vpn-port" name="vpn_port" type="number" min="1" max="65535" value="443" required></div>
+    <div class="field"><label for="handshake">Reality handshake hostname</label><input id="handshake" name="handshake" value="www.microsoft.com" required spellcheck="false" autocomplete="off"></div>
+    <button type="submit" class="button primary">{{template "icon-plus"}}Create VLESS + Reality</button>
+  </form>
+  <p class="hint">Open this TCP port in the firewall.</p>
+</section>
+{{end}}
+
+<form method="post" action="{{.PanelPath}}/server" class="full-height-form" data-dirty-form>
+  <section class="editor">
+    <div class="editor-heading">
+      <label for="server-json">Server JSON</label>
+      <div class="toolbar">
+        <button type="submit" name="action" value="format" class="button">{{template "icon-format"}}Format</button>
+        <button type="submit" name="action" value="validate" class="button">{{template "icon-validate"}}Validate</button>
+        <button type="submit" name="action" value="save" class="button primary">{{template "icon-apply"}}Apply</button>
+      </div>
+    </div>
+    <textarea id="server-json" name="server_json" class="code-input base-input" required
+              spellcheck="false" autocapitalize="off" autocomplete="off"
+              aria-describedby="server-help">{{.ServerJSON}}</textarea>
+    <div class="editor-help" id="server-help">
+      Inbound <code>users</code> are replaced with your clients. Applying restarts client connections.
+    </div>
+  </section>
+</form>
+{{end}}
