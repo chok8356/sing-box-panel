@@ -251,7 +251,7 @@ const DefaultClientBase = `{
     "strategy": "ipv4_only"
   },
   "inbounds": [
-    {"type": "tun", "tag": "tun-in", "address": ["172.19.0.1/30"], "auto_route": true, "strict_route": true, "stack": "mixed"}
+    {"type": "tun", "tag": "tun-in", "address": ["172.19.0.1/30", "fdfe:dcba:9876::1/126"], "auto_route": true, "strict_route": true, "stack": "mixed", "route_exclude_address": ["127.0.0.0/8", "::1/128"]}
   ],
   "outbounds": [
     {"type": "direct", "tag": "direct"}

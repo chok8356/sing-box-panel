@@ -2,6 +2,7 @@ package singbox
 
 import (
 	"os"
+	"reflect"
 	"strings"
 	"testing"
 )
@@ -24,6 +25,13 @@ func TestClientPresets(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
+			tun := root["inbounds"].([]any)[0].(map[string]any)
+			if !reflect.DeepEqual(tun["address"], []any{"172.19.0.1/30", "fdfe:dcba:9876::1/126"}) {
+				t.Fatalf("%s ads=%v: dual-stack TUN addresses missing", name, ads)
+			}
+			if !reflect.DeepEqual(tun["route_exclude_address"], []any{"127.0.0.0/8", "::1/128"}) {
+				t.Fatalf("%s ads=%v: loopback exclusions missing", name, ads)
+			}
 			route := root["route"].(map[string]any)
 			if route["final"] != "proxy" {
 				t.Fatal("preset bypasses VPN by default")
@@ -32,8 +40,28 @@ func TestClientPresets(t *testing.T) {
 			if rules[2].(map[string]any)["ip_is_private"] != true {
 				t.Fatal("local network rule missing")
 			}
-			if name == "russia" && len(root["dns"].(map[string]any)["rules"].([]any)) != 2 {
-				t.Fatal("split DNS missing")
+			if name == "russia" {
+				want, err := decodeObject(`{
+				  "dns": {
+				    "strategy": "ipv4_only",
+				    "rules": [
+				      {"action":"route","domain_suffix":["ru","su","xn--p1ai"],"server":"bootstrap"},
+				      {"action":"route","rule_set":["geosite-category-ru"],"server":"bootstrap"}
+				    ]
+				  },
+				  "inbounds": [{"type":"tun","tag":"tun-in","address":["172.19.0.1/30","fdfe:dcba:9876::1/126"],"auto_route":true,"stack":"mixed","strict_route":true,"route_exclude_address":["127.0.0.0/8","::1/128"]}]
+				}`)
+				if err != nil {
+					t.Fatal(err)
+				}
+				dns := root["dns"].(map[string]any)
+				wantDNS := want["dns"].(map[string]any)
+				if dns["strategy"] != wantDNS["strategy"] || !reflect.DeepEqual(dns["rules"], wantDNS["rules"]) {
+					t.Fatal("regional DNS policy differs from the Russia template")
+				}
+				if !reflect.DeepEqual(root["inbounds"], want["inbounds"]) {
+					t.Fatal("TUN settings differ from the Russia template")
+				}
 			}
 			for _, private := range []string{"openvpn.exe", "steam.exe", "aircampaign.ru", "nike.com.co", "private_key", "uuid"} {
 				if strings.Contains(base, private) {
