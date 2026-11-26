@@ -207,6 +207,12 @@ func (a *app) flushLastSeen(ctx context.Context, pending map[string]int64) {
 	if len(pending) == 0 {
 		return
 	}
+	// A configuration transaction can read before its first write. Keep the batch
+	// pending so this write cannot invalidate that transaction's SQLite snapshot.
+	if !a.mu.TryLock() {
+		return
+	}
+	defer a.mu.Unlock()
 	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
 	defer cancel()
 	if err := a.storeLastSeen(ctx, pending); err != nil {

@@ -377,6 +377,35 @@ func TestSubscriptionIDValidation(t *testing.T) {
 	}
 }
 
+func TestClientActivityFlushDuringChange(t *testing.T) {
+	a, _ := testApp(t, testConfig())
+	addClient(t, a.db, "Client", "token")
+	ctx := t.Context()
+	pending := map[string]int64{"token": 2}
+
+	err := a.mutate(ctx, func(tx *sql.Tx) error {
+		var id int64
+		if err := tx.QueryRowContext(ctx, "SELECT id FROM subscriptions WHERE name = 'Client'").Scan(&id); err != nil {
+			return err
+		}
+		a.flushLastSeen(ctx, pending)
+		_, err := tx.ExecContext(ctx, "UPDATE subscriptions SET enabled = 0 WHERE id = ?", id)
+		return err
+	})
+	if err != nil {
+		t.Fatalf("save client while activity is pending: %v", err)
+	}
+	if pending["token"] != 2 {
+		t.Fatal("activity was not retained for the next flush")
+	}
+
+	a.flushLastSeen(ctx, pending)
+	client, err := scanSubscription(a.db.QueryRow("SELECT " + subscriptionColumns + " FROM subscriptions"))
+	if err != nil || client.Enabled || !client.LastSeenAt.Valid || client.LastSeenAt.Int64 != 2 || len(pending) != 0 {
+		t.Fatalf("client change or activity was lost: enabled=%v, last seen=%v, err=%v", client.Enabled, client.LastSeenAt, err)
+	}
+}
+
 // A change holds app.mu and a write transaction through sing-box check and
 // restart; public subscriptions must still be served meanwhile.
 func TestSubscriptionsServedDuringChange(t *testing.T) {
