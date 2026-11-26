@@ -1,0 +1,38 @@
+syntax = "proto3";
+
+package daemon;
+option go_package = "sing-box-panel/internal/singbox/connectionapi";
+
+// Wire-compatible subset of sing-box v1.14.4 daemon/started_service.proto.
+service StartedService {
+  rpc SubscribeConnections(SubscribeConnectionsRequest) returns (stream ConnectionEvents);
+}
+
+message SubscribeConnectionsRequest {
+  int64 interval = 1;
+}
+
+enum ConnectionEventType {
+  CONNECTION_EVENT_NEW = 0;
+  CONNECTION_EVENT_UPDATE = 1;
+  CONNECTION_EVENT_CLOSED = 2;
+}
+
+message ConnectionEvent {
+  ConnectionEventType type = 1;
+  string id = 2;
+  Connection connection = 3;
+  int64 closed_at = 6;
+}
+
+message ConnectionEvents {
+  repeated ConnectionEvent events = 1;
+  bool reset = 2;
+}
+
+message Connection {
+  string inbound = 2;
+  string inbound_type = 3;
+  string user = 10;
+  int64 closed_at = 13;
+}

@@ -29,15 +29,17 @@ type Subscription struct {
 	Enabled      bool
 	CreatedAt    int64
 	UpdatedAt    int64
+	LastSeenAt   sql.NullInt64
+	Presence     string
 }
 
-const subscriptionColumns = "id, name, override_json, enabled, created_at, updated_at, uuid, token"
+const subscriptionColumns = "id, name, override_json, enabled, created_at, updated_at, uuid, token, last_seen_at"
 
 const sqliteConstraintUnique = 2067
 
 func scanSubscription(row interface{ Scan(...any) error }) (Subscription, error) {
 	var s Subscription
-	err := row.Scan(&s.ID, &s.Name, &s.OverrideJSON, &s.Enabled, &s.CreatedAt, &s.UpdatedAt, &s.UUID, &s.Token)
+	err := row.Scan(&s.ID, &s.Name, &s.OverrideJSON, &s.Enabled, &s.CreatedAt, &s.UpdatedAt, &s.UUID, &s.Token, &s.LastSeenAt)
 	return s, err
 }
 
@@ -63,6 +65,7 @@ func validateName(name string) error {
 }
 
 func (a *app) listSubscriptions(w http.ResponseWriter, r *http.Request) {
+	presence := a.onlineClients()
 	rows, err := a.db.QueryContext(r.Context(),
 		"SELECT "+subscriptionColumns+" FROM subscriptions ORDER BY name COLLATE NOCASE, id")
 	if err != nil {
@@ -81,6 +84,7 @@ func (a *app) listSubscriptions(w http.ResponseWriter, r *http.Request) {
 			serverError(w)
 			return
 		}
+		s.Presence = presence.status(s.Enabled, s.UUID)
 		data.Subscriptions = append(data.Subscriptions, s)
 	}
 	if rows.Err() != nil {

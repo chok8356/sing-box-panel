@@ -170,6 +170,8 @@ code { font: 0.75rem/1.25rem var(--font-mono); }
 .clients-table th:last-child { width: 15rem; }
 .clients-table tbody tr:has(.client-name) { position: relative; cursor: pointer; }
 .client-name { color: var(--text); font-weight: 500; text-decoration: none; overflow-wrap: anywhere; }
+.client-date, .client-presence { display: block; margin-top: 0.25rem; color: var(--muted); font-size: 0.75rem; overflow-wrap: anywhere; }
+.client-presence.online { color: var(--success); }
 .client-name::after { content: ""; position: absolute; inset: 0; }
 .clients-table .row-actions { position: relative; }
 .client-name:hover, .text-link:hover { text-decoration: underline; }

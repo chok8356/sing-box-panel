@@ -41,6 +41,9 @@ func (p *Process) Running() bool {
 // Current returns the config of the last successful Apply, or nil.
 func (p *Process) Current() []byte { return bytes.Clone(p.current) }
 
+// Done identifies the current run and closes when it exits.
+func (p *Process) Done() <-chan struct{} { return p.done }
+
 // PID returns the child process ID, or 0 when nothing was started.
 func (p *Process) PID() int {
 	if p.cmd == nil || p.cmd.Process == nil {

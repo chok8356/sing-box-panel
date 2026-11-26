@@ -49,6 +49,7 @@ func (a *app) routes(c config.Config) http.Handler {
 	admin.HandleFunc("POST "+p+"/settings/restore", a.restoreBackup)
 	admin.HandleFunc("GET "+p+"/logs", a.logsPage)
 	admin.HandleFunc("GET "+p+"/subscriptions", a.listSubscriptions)
+	admin.HandleFunc("GET "+p+"/subscriptions/activity", a.subscriptionActivity)
 	admin.HandleFunc("GET "+p+"/subscriptions/new", a.newSubscription)
 	admin.HandleFunc("POST "+p+"/subscriptions", a.saveSubscription)
 	admin.HandleFunc("GET "+p+"/subscriptions/{id}", a.editSubscription)

@@ -8,7 +8,7 @@
 </div>
 
 <div class="table-wrap">
-  <table class="clients-table">
+  <table class="clients-table"{{if and .Managed .Subscriptions}} data-activity-url="{{.PanelPath}}/subscriptions/activity"{{end}}>
     {{if .Subscriptions}}
     <thead>
       <tr>
@@ -20,10 +20,15 @@
     {{end}}
     <tbody>
       {{range .Subscriptions}}
-      <tr>
-        <td><a class="client-name" href="{{$.PanelPath}}/subscriptions/{{.ID}}">{{.Name}}</a></td>
+      <tr data-client-id="{{.ID}}">
+        <td>
+          <a class="client-name" href="{{$.PanelPath}}/subscriptions/{{.ID}}">{{.Name}}</a>
+          <span class="client-date">Created {{clientDate .CreatedAt}}</span>
+          <span class="client-date">Last online <span data-last-seen>{{if .LastSeenAt.Valid}}{{clientDate .LastSeenAt.Int64}}{{else}}—{{end}}</span></span>
+        </td>
         <td>
           {{if .Enabled}}<span class="badge enabled">Enabled</span>{{else}}<span class="badge disabled">Disabled</span>{{end}}
+          {{if $.Managed}}<span class="client-presence{{if eq .Presence "Online"}} online{{end}}" data-presence>{{.Presence}}</span>{{end}}
         </td>
         <td>
           <div class="row-actions">

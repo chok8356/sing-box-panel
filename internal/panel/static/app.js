@@ -31,6 +31,33 @@ document.querySelectorAll("[data-copy], [data-copy-target]").forEach(button => {
   });
 });
 
+const clientActivity = document.querySelector("[data-activity-url]");
+if (clientActivity) {
+  async function refreshActivity() {
+    try {
+      if (document.hidden) return;
+      const response = await fetch(clientActivity.dataset.activityUrl, {cache: "no-store"});
+      if (!response.ok) throw new Error("Could not refresh client activity");
+      const clients = await response.json();
+      for (const row of clientActivity.querySelectorAll("[data-client-id]")) {
+        const client = clients[row.dataset.clientId];
+        const status = row.querySelector("[data-presence]");
+        status.textContent = client?.status ?? "—";
+        status.classList.toggle("online", client?.status === "Online");
+        row.querySelector("[data-last-seen]").textContent = client?.lastSeen ?? "—";
+      }
+    } catch {
+      for (const status of clientActivity.querySelectorAll("[data-presence]")) {
+        if (status.textContent !== "—") status.textContent = "Unavailable";
+        status.classList.remove("online");
+      }
+    } finally {
+      setTimeout(refreshActivity, 5000);
+    }
+  }
+  setTimeout(refreshActivity, 5000);
+}
+
 const logs = document.querySelector("#server-logs");
 if (logs) {
   let pending = false;

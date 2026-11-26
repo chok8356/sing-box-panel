@@ -34,7 +34,8 @@ CREATE TABLE IF NOT EXISTS subscriptions (
     token         TEXT NOT NULL UNIQUE, -- secret part of the subscription URL
     enabled       INTEGER NOT NULL DEFAULT 1 CHECK (enabled IN (0, 1)),
     created_at    INTEGER NOT NULL,
-    updated_at    INTEGER NOT NULL
+    updated_at    INTEGER NOT NULL,
+    last_seen_at  INTEGER
 );
 INSERT OR IGNORE INTO settings (key, value) VALUES ('base_config', '{}');
 `
@@ -62,14 +63,40 @@ func openDB(filename string) (*sql.DB, error) {
 		return nil, err
 	}
 	// WAL lets readers run while a change holds its write transaction through a
-	// sing-box restart; writes are serialized by app.mu. DSN pragmas apply to
-	// every new connection.
+	// sing-box restart. DSN pragmas apply to every new connection.
 	db.SetMaxOpenConns(4)
-	if _, err := db.Exec(schema); err != nil {
+	if err := initSchema(db); err != nil {
 		db.Close()
 		return nil, err
 	}
 	return db, nil
+}
+
+func initSchema(db *sql.DB) error {
+	tx, err := db.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	if _, err := tx.Exec(schema); err != nil {
+		return err
+	}
+	hasColumn, err := hasLastSeenColumn(context.Background(), tx)
+	if err != nil {
+		return err
+	}
+	if !hasColumn {
+		if _, err := tx.Exec("ALTER TABLE subscriptions ADD COLUMN last_seen_at INTEGER"); err != nil {
+			return fmt.Errorf("add client activity column: %w", err)
+		}
+	}
+	return tx.Commit()
+}
+
+func hasLastSeenColumn(ctx context.Context, q queryer) (bool, error) {
+	var exists bool
+	err := q.QueryRowContext(ctx, "SELECT EXISTS (SELECT 1 FROM pragma_table_info('subscriptions') WHERE name = 'last_seen_at')").Scan(&exists)
+	return exists, err
 }
 
 // sqliteURI builds a file: URI for an absolute path, including Windows drive paths.

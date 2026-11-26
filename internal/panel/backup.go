@@ -224,7 +224,15 @@ func readBackup(ctx context.Context, filename string, c config.Config) (map[stri
 			return bad(errors.New("backup has conflicting panel and inbound ports"))
 		}
 	}
-	rows, err = db.QueryContext(ctx, "SELECT "+subscriptionColumns+" FROM subscriptions ORDER BY id")
+	columns := subscriptionColumns
+	hasColumn, err := hasLastSeenColumn(ctx, db)
+	if err != nil {
+		return bad(err)
+	}
+	if !hasColumn {
+		columns = strings.TrimSuffix(columns, "last_seen_at") + "NULL"
+	}
+	rows, err = db.QueryContext(ctx, "SELECT "+columns+" FROM subscriptions ORDER BY id")
 	if err != nil {
 		return bad(err)
 	}
@@ -274,7 +282,7 @@ func (a *app) restoreDatabase(ctx context.Context, filename string) (config.Conf
 				}
 			}
 			for _, client := range clients {
-				if _, err := tx.ExecContext(ctx, "INSERT INTO subscriptions("+subscriptionColumns+") VALUES(?,?,?,?,?,?,?,?)", client.ID, client.Name, client.OverrideJSON, client.Enabled, client.CreatedAt, client.UpdatedAt, client.UUID, client.Token); err != nil {
+				if _, err := tx.ExecContext(ctx, "INSERT INTO subscriptions("+subscriptionColumns+") VALUES(?,?,?,?,?,?,?,?,?)", client.ID, client.Name, client.OverrideJSON, client.Enabled, client.CreatedAt, client.UpdatedAt, client.UUID, client.Token, client.LastSeenAt); err != nil {
 					return err
 				}
 			}

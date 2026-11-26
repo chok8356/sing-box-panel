@@ -66,7 +66,9 @@ func TestWebBackupRestoresAllSettingsAndClients(t *testing.T) {
 	if err := seedVPN(a.db, "vpn.example.com", "example.com", 443, 8443); err != nil {
 		t.Fatal(err)
 	}
-	a.db.Exec("UPDATE subscriptions SET override_json=?", `{"route":{"rules":[]}}`)
+	if _, err := a.db.Exec("UPDATE subscriptions SET override_json=?, last_seen_at=1800000000", `{"route":{"rules":[]}}`); err != nil {
+		t.Fatal(err)
+	}
 	before, _ := effectiveServer(t.Context(), a.db)
 	base, _ := a.baseConfig(t.Context())
 	token := tokenOf(t, a.db, "First client")
@@ -98,11 +100,11 @@ func TestWebBackupRestoresAllSettingsAndClients(t *testing.T) {
 		t.Fatal("client credentials/server/base configuration changed")
 	}
 	var override string
-	var sessions int
-	a.db.QueryRow("SELECT override_json FROM subscriptions").Scan(&override)
+	var sessions, lastSeen int
+	a.db.QueryRow("SELECT override_json, last_seen_at FROM subscriptions").Scan(&override, &lastSeen)
 	a.db.QueryRow("SELECT count(*) FROM admin_sessions").Scan(&sessions)
-	if override != `{"route":{"rules":[]}}` || sessions != 0 {
-		t.Fatal("override lost or sessions restored")
+	if override != `{"route":{"rules":[]}}` || lastSeen != 1800000000 || sessions != 0 {
+		t.Fatal("override or activity lost, or sessions restored")
 	}
 	wantStatus(t, request(t, a.handler(), "POST", testOrigin+a.config().PanelPath+"/login", form("username", "admin", "password", "test-secret"), false), 303)
 	restarted, err := newApp(changed, a.db)
@@ -116,6 +118,41 @@ func TestWebBackupRestoresAllSettingsAndClients(t *testing.T) {
 	_, _, recovery, recoverySite, err := readBackup(t.Context(), files[0], a.config())
 	if err != nil || recovery.AdminUsername != changed.AdminUsername || !validPassword(recovery, changed.AdminPassword) || recoverySite.Address != "other.example" {
 		t.Fatal("recovery backup does not contain replaced state", err)
+	}
+}
+
+func TestLegacyBackupAndActivityMigration(t *testing.T) {
+	a := backupApp(t)
+	addClient(t, a.db, "Existing", "existing-token")
+	path := filepath.Join(t.TempDir(), "legacy.db")
+	if err := snapshotDatabase(t.Context(), a.config(), path); err != nil {
+		t.Fatal(err)
+	}
+	legacy, err := sql.Open("sqlite", path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, err = legacy.Exec("ALTER TABLE subscriptions DROP COLUMN last_seen_at")
+	legacy.Close()
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, clients, _, _, err := readBackup(t.Context(), path, a.config())
+	if err != nil || len(clients) != 1 || clients[0].LastSeenAt.Valid || clients[0].Token != "existing-token" {
+		t.Fatal("legacy backup lost a client or invented its activity", err)
+	}
+	db, err := openDB(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if err := initSchema(db); err != nil {
+		t.Fatal("migration is not repeatable", err)
+	}
+	client, err := scanSubscription(db.QueryRow("SELECT " + subscriptionColumns + " FROM subscriptions"))
+	if err != nil || client.ID != clients[0].ID || client.CreatedAt != 1 || client.UUID != clients[0].UUID ||
+		client.Token != clients[0].Token || client.LastSeenAt.Valid {
+		t.Fatal("migration changed existing client data", err)
 	}
 }
 

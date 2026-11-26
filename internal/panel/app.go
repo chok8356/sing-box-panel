@@ -41,13 +41,16 @@ type app struct {
 	certRefresh chan struct{} // see requestCertRefresh
 	listeners   *listeners
 
-	// mu serializes changes to the database and to the sing-box process,
+	// mu serializes configuration changes to the database and to the sing-box process,
 	// and guards core and runtimeError. Plain SQLite reads do not take it.
 	mu           sync.RWMutex
 	core         *singbox.Process // nil when SING_BOX_BINARY is empty
 	runtimeError string
 	logs         singbox.TailLog
 	loginLimits  loginLimiter
+
+	connectionAPI *singbox.ConnectionAPI
+	presence      clientPresence
 }
 
 // page is the data passed to every template.
@@ -122,7 +125,10 @@ func newApp(c config.Config, db *sql.DB) (*app, error) {
 }
 
 func (a *app) parseTemplate(name string) (*template.Template, error) {
-	return template.New("layout.html").Funcs(template.FuncMap{"subscriptionURL": a.subscriptionURL}).
+	return template.New("layout.html").Funcs(template.FuncMap{
+		"subscriptionURL": a.subscriptionURL,
+		"clientDate":      formatClientDate,
+	}).
 		ParseFS(a.assets, "templates/layout.html", "templates/"+name+".html")
 }
 
@@ -147,6 +153,10 @@ func Run(c config.Config) error {
 		}
 	}
 	if c.SingBoxBinary != "" {
+		a.connectionAPI, err = singbox.NewConnectionAPI()
+		if err != nil {
+			log.Printf("cannot initialize client activity: %v", err)
+		}
 		a.startCore(ctx)
 		defer func() {
 			stop()
@@ -155,6 +165,17 @@ func Run(c config.Config) error {
 			a.core.Stop()
 		}()
 		go a.watchCore(ctx)
+		if a.connectionAPI != nil {
+			presenceDone := make(chan struct{})
+			go func() {
+				defer close(presenceDone)
+				a.watchPresence(ctx)
+			}()
+			defer func() {
+				stop()
+				<-presenceDone
+			}()
+		}
 	}
 
 	port := a.site().PanelPort

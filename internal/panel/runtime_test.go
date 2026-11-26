@@ -126,15 +126,26 @@ func TestRealVPNLifecycle(t *testing.T) {
 	prepared, _ := json.Marshal(root)
 	serverRaw = string(prepared)
 	a.db.Exec("UPDATE settings SET value=? WHERE key='server_config'", serverRaw)
+	a.connectionAPI, err = singbox.NewConnectionAPI()
+	if err != nil {
+		t.Fatal(err)
+	}
 	a.core = &singbox.Process{Binary: binary, Dir: c.RuntimeDir}
 	t.Cleanup(func() { a.core.Stop() })
-	body, err := effectiveServer(t.Context(), a.db)
+	body, err := a.runtimeServer(t.Context(), a.db)
 	if err != nil {
 		t.Fatal(err)
 	}
 	if err := a.core.Apply(t.Context(), body); err != nil {
 		t.Fatal(err)
 	}
+	presenceCtx, stopPresence := context.WithCancel(t.Context())
+	presenceDone := make(chan struct{})
+	go func() {
+		defer close(presenceDone)
+		a.watchPresence(presenceCtx)
+	}()
+	t.Cleanup(func() { stopPresence(); <-presenceDone })
 	h := a.handler()
 	panel := testOrigin + c.PanelPath
 	pid, runningConfig := a.core.PID(), string(a.core.Current())
@@ -165,9 +176,19 @@ func TestRealVPNLifecycle(t *testing.T) {
 	if strings.Contains(final.Body.String(), "{{client_uuid}}") || strings.Contains(final.Body.String(), "private_key") {
 		t.Fatal("bad client credential expansion")
 	}
-	destination := httptest.NewServer(textHandler("VPN works"))
+	holdOpen, finishResponse := context.WithCancel(t.Context())
+	destination := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/hold" {
+			w.WriteHeader(http.StatusOK)
+			w.(http.Flusher).Flush()
+			<-holdOpen.Done()
+			return
+		}
+		textHandler("VPN works").ServeHTTP(w, r)
+	}))
 	defer destination.Close()
-	launchClient := func(config []byte) (func() bool, func()) {
+	defer finishResponse()
+	launchClient := func(config []byte) (func() bool, *http.Client) {
 		var client map[string]any
 		json.Unmarshal(config, &client)
 		proxyPort := freePort(t)
@@ -209,9 +230,55 @@ func TestRealVPNLifecycle(t *testing.T) {
 			}
 			time.Sleep(50 * time.Millisecond)
 		}
-		return works, stop
+		return works, clientHTTP
 	}
-	works, _ := launchClient(final.Body.Bytes())
+	works, clientHTTP := launchClient(final.Body.Bytes())
+	activityURL := panel + "/subscriptions/activity"
+	wantStatus(t, request(t, h, "GET", activityURL, nil, false), 303)
+	cookie := loginCookie(t, h, activityURL)
+	waitForActivity := func(status string, requireLastSeen bool) {
+		t.Helper()
+		deadline := time.Now().Add(8 * time.Second)
+		for {
+			req := httptest.NewRequest("GET", activityURL, nil)
+			req.AddCookie(cookie)
+			w := httptest.NewRecorder()
+			h.ServeHTTP(w, req)
+			wantStatus(t, w, http.StatusOK)
+			body := w.Body.String()
+			if strings.Contains(body, `"status":"`+status+`"`) && (!requireLastSeen || !strings.Contains(body, `"lastSeen":"—"`)) {
+				return
+			}
+			if time.Now().After(deadline) {
+				t.Fatalf("want %s (last online required: %v), got %s", status, requireLastSeen, body)
+			}
+			time.Sleep(50 * time.Millisecond)
+		}
+	}
+	hold, cancelHold := context.WithTimeout(t.Context(), 10*time.Second)
+	defer cancelHold()
+	req, err := http.NewRequestWithContext(hold, "GET", destination.URL+"/hold", nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	response, err := clientHTTP.Transport.RoundTrip(req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer response.Body.Close()
+	waitForActivity("Online", false)
+	finishResponse()
+	if _, err := io.Copy(io.Discard, response.Body); err != nil {
+		t.Fatal(err)
+	}
+	waitForActivity("Offline", true)
+	clientsPage := request(t, h, "GET", panel+"/subscriptions", nil, true)
+	wantStatus(t, clientsPage, http.StatusOK)
+	for _, label := range []string{"Created", "Last online", "Offline", "UTC"} {
+		if !strings.Contains(clientsPage.Body.String(), label) {
+			t.Fatalf("client list is missing %q", label)
+		}
+	}
 	// Validation failure leaves the database and live VPN unchanged.
 	invalid := form("server_json", `{"inbounds":[{"type":"no-such-protocol"}]}`, "action", "save")
 	bad := request(t, h, "POST", panel+"/server", invalid, true)

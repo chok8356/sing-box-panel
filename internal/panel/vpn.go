@@ -19,7 +19,7 @@ func (a *app) startCore(ctx context.Context) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	a.core = &singbox.Process{Binary: a.config().SingBoxBinary, Dir: a.config().RuntimeDir, Logs: &a.logs}
-	body, err := effectiveServer(ctx, a.db)
+	body, err := a.runtimeServer(ctx, a.db)
 	if err == nil && len(body) == 0 {
 		return
 	}
@@ -55,7 +55,7 @@ func (a *app) watchCore(ctx context.Context) {
 		if a.core.Running() {
 			retryAt, backoff = time.Time{}, minRetry
 		} else if !time.Now().Before(retryAt) {
-			body, err := effectiveServer(ctx, a.db)
+			body, err := a.runtimeServer(ctx, a.db)
 			if err == nil && len(body) == 0 {
 				a.mu.Unlock()
 				continue
@@ -93,7 +93,7 @@ func (a *app) mutate(ctx context.Context, change func(*sql.Tx) error) error {
 	var previous []byte
 	if a.core != nil {
 		previous = a.core.Current()
-		body, err := effectiveServer(ctx, tx)
+		body, err := a.runtimeServer(ctx, tx)
 		if err != nil {
 			return err
 		}
@@ -127,6 +127,14 @@ func (a *app) mutate(ctx context.Context, change func(*sql.Tx) error) error {
 type queryer interface {
 	QueryContext(context.Context, string, ...any) (*sql.Rows, error)
 	QueryRowContext(context.Context, string, ...any) *sql.Row
+}
+
+func (a *app) runtimeServer(ctx context.Context, q queryer) ([]byte, error) {
+	body, err := effectiveServer(ctx, q)
+	if err != nil || len(body) == 0 || a.connectionAPI == nil {
+		return body, err
+	}
+	return a.connectionAPI.Configure(body)
 }
 
 // effectiveServer reads the stored server JSON and enabled clients (from the
