@@ -31,23 +31,36 @@ document.querySelectorAll("[data-copy], [data-copy-target]").forEach(button => {
   });
 });
 
-const clientActivity = document.querySelector("[data-activity-url]");
-if (clientActivity) {
+const clientRows = document.querySelector(".client-rows");
+const clientTimes = document.querySelectorAll("time[data-local-time]");
+if (clientRows || clientTimes.length) {
+  const dateFormat = new Intl.DateTimeFormat(undefined, {dateStyle: "short", timeStyle: "short"});
+  const localizeTime = time => { time.textContent = dateFormat.format(new Date(time.dateTime)); };
+  clientTimes.forEach(localizeTime);
+
   async function refreshActivity() {
     try {
       if (document.hidden) return;
-      const response = await fetch(clientActivity.dataset.activityUrl, {cache: "no-store"});
+      const response = await fetch(clientRows.dataset.activityUrl, {cache: "no-store"});
       if (!response.ok) throw new Error("Could not refresh client activity");
       const clients = await response.json();
-      for (const row of clientActivity.querySelectorAll("[data-client-id]")) {
+      for (const row of clientRows.querySelectorAll("[data-client-id]")) {
         const client = clients[row.dataset.clientId];
         const status = row.querySelector("[data-presence]");
         status.textContent = client?.status ?? "—";
         status.classList.toggle("online", client?.status === "Online");
-        row.querySelector("[data-last-seen]").textContent = client?.lastSeen ?? "—";
+        const lastSeen = row.querySelector("[data-last-seen]");
+        if (client?.lastSeen) {
+          const time = lastSeen.querySelector("time") ?? document.createElement("time");
+          time.dateTime = client.lastSeen;
+          localizeTime(time);
+          lastSeen.replaceChildren(time);
+        } else {
+          lastSeen.textContent = "—";
+        }
       }
     } catch {
-      for (const status of clientActivity.querySelectorAll("[data-presence]")) {
+      for (const status of clientRows.querySelectorAll("[data-presence]")) {
         if (status.textContent !== "—") status.textContent = "Unavailable";
         status.classList.remove("online");
       }
@@ -55,7 +68,7 @@ if (clientActivity) {
       setTimeout(refreshActivity, 5000);
     }
   }
-  setTimeout(refreshActivity, 5000);
+  if (clientRows?.dataset.activityUrl) setTimeout(refreshActivity, 5000);
 }
 
 const logs = document.querySelector("#server-logs");

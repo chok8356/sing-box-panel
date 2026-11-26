@@ -234,8 +234,8 @@ func (a *app) storeLastSeen(ctx context.Context, pending map[string]int64) error
 	return tx.Commit()
 }
 
-func formatClientDate(timestamp int64) string {
-	return time.Unix(timestamp, 0).UTC().Format("2006-01-02 15:04 UTC")
+func clientTime(timestamp int64) time.Time {
+	return time.Unix(timestamp, 0).UTC()
 }
 
 func (a *app) subscriptionActivity(w http.ResponseWriter, r *http.Request) {
@@ -247,8 +247,8 @@ func (a *app) subscriptionActivity(w http.ResponseWriter, r *http.Request) {
 	}
 	defer rows.Close()
 	type activity struct {
-		Status   string `json:"status"`
-		LastSeen string `json:"lastSeen"`
+		Status   string     `json:"status"`
+		LastSeen *time.Time `json:"lastSeen"`
 	}
 	clients := make(map[int64]activity)
 	for rows.Next() {
@@ -260,9 +260,10 @@ func (a *app) subscriptionActivity(w http.ResponseWriter, r *http.Request) {
 			serverError(w)
 			return
 		}
-		client := activity{Status: online.status(enabled, uuid), LastSeen: "—"}
+		client := activity{Status: online.status(enabled, uuid)}
 		if lastSeen.Valid {
-			client.LastSeen = formatClientDate(lastSeen.Int64)
+			timestamp := clientTime(lastSeen.Int64)
+			client.LastSeen = &timestamp
 		}
 		clients[id] = client
 	}

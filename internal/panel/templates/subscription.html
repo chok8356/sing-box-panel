@@ -1,9 +1,12 @@
 {{define "content"}}
 <div class="page-heading">
-  <div class="breadcrumb">
-    <a href="{{.PanelPath}}/subscriptions">{{template "icon-back"}}Clients</a>
-    <span>/</span>
-    <h1>{{if .IsNew}}New client{{else}}{{.Subscription.Name}}{{end}}</h1>
+  <div>
+    <div class="breadcrumb">
+      <a href="{{.PanelPath}}/subscriptions">{{template "icon-back"}}Clients</a>
+      <span>/</span>
+      <h1>{{if .IsNew}}New client{{else}}{{.Subscription.Name}}{{end}}</h1>
+    </div>
+    {{if not .IsNew}}<p class="page-description">Created {{template "client-timestamp" (clientTime .Subscription.CreatedAt)}}</p>{{end}}
   </div>
 </div>
 

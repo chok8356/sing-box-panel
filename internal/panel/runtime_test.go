@@ -246,8 +246,17 @@ func TestRealVPNLifecycle(t *testing.T) {
 			h.ServeHTTP(w, req)
 			wantStatus(t, w, http.StatusOK)
 			body := w.Body.String()
-			if strings.Contains(body, `"status":"`+status+`"`) && (!requireLastSeen || !strings.Contains(body, `"lastSeen":"—"`)) {
-				return
+			var clients map[int64]struct {
+				Status   string
+				LastSeen *time.Time
+			}
+			if err := json.Unmarshal(w.Body.Bytes(), &clients); err != nil {
+				t.Fatal(err)
+			}
+			for _, client := range clients {
+				if client.Status == status && (!requireLastSeen || client.LastSeen != nil) {
+					return
+				}
 			}
 			if time.Now().After(deadline) {
 				t.Fatalf("want %s (last online required: %v), got %s", status, requireLastSeen, body)
@@ -274,7 +283,7 @@ func TestRealVPNLifecycle(t *testing.T) {
 	waitForActivity("Offline", true)
 	clientsPage := request(t, h, "GET", panel+"/subscriptions", nil, true)
 	wantStatus(t, clientsPage, http.StatusOK)
-	for _, label := range []string{"Created", "Last online", "Offline", "UTC"} {
+	for _, label := range []string{"Last online", "Offline", "UTC"} {
 		if !strings.Contains(clientsPage.Body.String(), label) {
 			t.Fatalf("client list is missing %q", label)
 		}
@@ -313,6 +322,11 @@ func TestRealVPNLifecycle(t *testing.T) {
 	var id int64
 	a.db.QueryRow("SELECT id FROM subscriptions WHERE name='First client'").Scan(&id)
 	edit := panel + "/subscriptions/" + strconv.FormatInt(id, 10)
+	clientPage := request(t, h, "GET", edit, nil, true)
+	wantStatus(t, clientPage, http.StatusOK)
+	if !strings.Contains(clientPage.Body.String(), "Created <time") {
+		t.Fatal("client page is missing the creation date")
+	}
 	fields := url.Values{"name": {"First client"}, "override_json": {"{}"}, "action": {"save"}}
 	wantStatus(t, request(t, h, "POST", edit, fields, true), 303)
 	wantStatus(t, request(t, h, "GET", public, nil, false), 404)

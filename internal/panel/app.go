@@ -127,7 +127,7 @@ func newApp(c config.Config, db *sql.DB) (*app, error) {
 func (a *app) parseTemplate(name string) (*template.Template, error) {
 	return template.New("layout.html").Funcs(template.FuncMap{
 		"subscriptionURL": a.subscriptionURL,
-		"clientDate":      formatClientDate,
+		"clientTime":      clientTime,
 	}).
 		ParseFS(a.assets, "templates/layout.html", "templates/"+name+".html")
 }

@@ -7,40 +7,41 @@
   {{if .Unconfigured}}<a class="button primary" href="{{.PanelPath}}/server">{{template "icon-server"}}Set up server</a>{{else}}<a class="button primary" href="{{.PanelPath}}/subscriptions/new">{{template "icon-plus"}}New client</a>{{end}}
 </div>
 
-<div class="table-wrap">
-  <table class="clients-table"{{if and .Managed .Subscriptions}} data-activity-url="{{.PanelPath}}/subscriptions/activity"{{end}}>
-    {{if .Subscriptions}}
-    <thead>
-      <tr>
-        <th scope="col">Name</th>
-        <th scope="col">Status</th>
-        <th scope="col"><span class="sr-only">Actions</span></th>
-      </tr>
-    </thead>
+<div class="client-list">
+  {{if .Subscriptions}}
+  <div class="client-grid client-list-header" aria-hidden="true">
+    <span>Name</span>
+    <span>Connection</span>
+    <span>Last online</span>
+    <span>Access</span>
+  </div>
+  <ul class="client-rows" role="list"{{if .Managed}} data-activity-url="{{.PanelPath}}/subscriptions/activity"{{end}}>
+    {{range .Subscriptions}}
+    <li class="client-grid client-row" data-client-id="{{.ID}}">
+      <a class="client-name" href="{{$.PanelPath}}/subscriptions/{{.ID}}">{{.Name}}</a>
+      <div class="client-connection">
+        <span class="client-label">Connection</span>
+        <span class="client-presence{{if eq .Presence "Online"}} online{{end}}" data-presence>{{if $.Managed}}{{.Presence}}{{else}}—{{end}}</span>
+      </div>
+      <div class="client-seen client-date">
+        <span class="client-label">Last online</span>
+        <span data-last-seen>{{if .LastSeenAt.Valid}}{{template "client-timestamp" (clientTime .LastSeenAt.Int64)}}{{else}}—{{end}}</span>
+      </div>
+      <div class="client-access">
+        <span class="client-label">Access</span>
+        <span class="client-access-state" title="{{if .Enabled}}Enabled{{else}}Disabled{{end}}">
+          {{if .Enabled}}{{template "icon-check"}}<span class="sr-only">Enabled</span>{{else}}{{template "icon-cancel"}}<span class="sr-only">Disabled</span>{{end}}
+        </span>
+      </div>
+      <div class="row-actions">
+        <button type="button" class="button" data-copy="{{subscriptionURL .Token}}" aria-label="Copy URL for {{.Name}}" title="Copy URL">{{template "icon-copy"}}</button>
+        <a class="button" href="{{$.PanelPath}}/subscriptions/{{.ID}}" aria-label="Edit {{.Name}}" title="Edit">{{template "icon-edit"}}</a>
+      </div>
+    </li>
     {{end}}
-    <tbody>
-      {{range .Subscriptions}}
-      <tr data-client-id="{{.ID}}">
-        <td>
-          <a class="client-name" href="{{$.PanelPath}}/subscriptions/{{.ID}}">{{.Name}}</a>
-          <span class="client-date">Created {{clientDate .CreatedAt}}</span>
-          <span class="client-date">Last online <span data-last-seen>{{if .LastSeenAt.Valid}}{{clientDate .LastSeenAt.Int64}}{{else}}—{{end}}</span></span>
-        </td>
-        <td>
-          {{if .Enabled}}<span class="badge enabled">Enabled</span>{{else}}<span class="badge disabled">Disabled</span>{{end}}
-          {{if $.Managed}}<span class="client-presence{{if eq .Presence "Online"}} online{{end}}" data-presence>{{.Presence}}</span>{{end}}
-        </td>
-        <td>
-          <div class="row-actions">
-            <button type="button" class="button" data-copy="{{subscriptionURL .Token}}" aria-label="Copy URL for {{.Name}}">{{template "icon-copy"}}<span class="action-label">Copy URL</span></button>
-            <a class="button" href="{{$.PanelPath}}/subscriptions/{{.ID}}" aria-label="Edit {{.Name}}">{{template "icon-edit"}}<span class="action-label">Edit</span></a>
-          </div>
-        </td>
-      </tr>
-      {{else}}
-      <tr><td colspan="3" class="empty-state"><span class="empty-icon">{{template "icon-users"}}</span><strong>No clients yet</strong>{{if .Unconfigured}}<p>Set up your server, choose a client config, then create your first client.</p><a class="text-link" href="{{.PanelPath}}/server">{{template "icon-server"}}Set up server</a>{{else}}<p>Create your first client, then share their subscription link.</p><a class="text-link" href="{{.PanelPath}}/subscriptions/new">{{template "icon-plus"}}Create a client</a>{{end}}</td></tr>
-      {{end}}
-    </tbody>
-  </table>
+  </ul>
+  {{else}}
+  <div class="empty-state"><span class="empty-icon">{{template "icon-users"}}</span><strong>No clients yet</strong>{{if .Unconfigured}}<p>Set up your server, choose a client config, then create your first client.</p><a class="text-link" href="{{.PanelPath}}/server">{{template "icon-server"}}Set up server</a>{{else}}<p>Create your first client, then share their subscription link.</p><a class="text-link" href="{{.PanelPath}}/subscriptions/new">{{template "icon-plus"}}Create a client</a>{{end}}</div>
+  {{end}}
 </div>
 {{end}}
