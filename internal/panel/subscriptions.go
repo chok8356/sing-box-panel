@@ -48,13 +48,13 @@ func scanSubscription(row interface{ Scan(...any) error }) (Subscription, error)
 func (s Subscription) Traffic() string { return formatBytes(s.UploadBytes + s.DownloadBytes) }
 
 func formatBytes(bytes int64) string {
-	if bytes < 1024 {
+	if bytes < 1000 {
 		return fmt.Sprintf("%d B", bytes)
 	}
 	value := float64(bytes)
-	for _, unit := range []string{"KiB", "MiB", "GiB", "TiB", "PiB", "EiB"} {
-		value /= 1024
-		if value < 1024 {
+	for _, unit := range []string{"KB", "MB", "GB", "TB", "PB", "EB"} {
+		value /= 1000
+		if value < 999.95 {
 			return fmt.Sprintf("%.1f %s", value, unit)
 		}
 	}
