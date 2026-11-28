@@ -13,7 +13,7 @@ Web panel for a [sing-box](https://sing-box.sagernet.org/) proxy server. Create 
 <details>
 <summary>More screenshots</summary>
 
-![Client with a personal override](docs/screenshots/client.png)
+![Client details and traffic counters](docs/screenshots/client.png)
 
 ![Server config](docs/screenshots/server.png)
 
