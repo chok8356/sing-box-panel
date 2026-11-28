@@ -149,6 +149,12 @@ func TestRealVPNLifecycle(t *testing.T) {
 	h := a.handler()
 	panel := testOrigin + c.PanelPath
 	pid, runningConfig := a.core.PID(), string(a.core.Current())
+	w := request(t, h, "GET", panel+"/server", nil, true)
+	wantStatus(t, w, 200)
+	if page := w.Body.String(); !strings.Contains(page, `<p class="core-version">sing-box <code>`) ||
+		strings.Contains(page, "Environment:") {
+		t.Fatal("server page should show only the sing-box version")
+	}
 	for _, tc := range []struct {
 		action, json string
 		status       int
@@ -162,6 +168,9 @@ func TestRealVPNLifecycle(t *testing.T) {
 		wantStatus(t, w, tc.status)
 		if !strings.Contains(w.Body.String(), `<span class="badge enabled">Running</span>`) {
 			t.Fatalf("%s response lost the running status", tc.action)
+		}
+		if !strings.Contains(w.Body.String(), `<p class="core-version">sing-box <code>`) {
+			t.Fatalf("%s response lost the sing-box version", tc.action)
 		}
 		if !a.core.Running() || a.core.PID() != pid || string(a.core.Current()) != runningConfig {
 			t.Fatal("a JSON tool changed the running VPN")

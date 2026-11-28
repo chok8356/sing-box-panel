@@ -3,6 +3,9 @@
   <div>
     <h1>Server config</h1>
     <p class="page-description">Configure inbounds and connection protocols.</p>
+    {{if .Managed}}
+    <p class="core-version">{{if .CoreVersion}}sing-box <code>{{.CoreVersion}}</code>{{else}}sing-box version unavailable{{end}}</p>
+    {{end}}
   </div>
   {{if .Running}}<span class="badge enabled">Running</span>{{else}}<span class="badge disabled">Stopped</span>{{end}}
 </div>

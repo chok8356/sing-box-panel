@@ -206,10 +206,7 @@ func storedConfigs(ctx context.Context, q queryer) (base, server string, err err
 }
 
 func (a *app) serverPage(w http.ResponseWriter, r *http.Request) {
-	a.mu.RLock()
-	defer a.mu.RUnlock()
-	data := page{Title: "Server config", Active: "server", RuntimeError: a.runtimeError}
-	data.Running = a.core != nil && a.core.Running()
+	var data page
 	err := a.db.QueryRowContext(r.Context(), "SELECT value FROM settings WHERE key='server_config'").
 		Scan(&data.ServerJSON)
 	if errors.Is(err, sql.ErrNoRows) {
@@ -222,7 +219,21 @@ func (a *app) serverPage(w http.ResponseWriter, r *http.Request) {
 		data.Notice = "Server config applied. Existing client connections were restarted."
 	}
 	data.Unconfigured = data.ServerJSON == "{}" || data.ServerJSON == ""
-	a.render(w, http.StatusOK, "server", data)
+	a.renderServer(w, r, http.StatusOK, data)
+}
+
+func (a *app) renderServer(w http.ResponseWriter, r *http.Request, status int, data page) {
+	a.mu.RLock()
+	core := a.core
+	data.Running = core != nil && core.Running()
+	data.RuntimeError = a.runtimeError
+	a.mu.RUnlock()
+
+	if core != nil {
+		data.CoreVersion = core.Version(r.Context())
+	}
+	data.Title, data.Active = "Server config", "server"
+	a.render(w, status, "server", data)
 }
 
 func (a *app) createReality(w http.ResponseWriter, r *http.Request) {
@@ -261,7 +272,7 @@ func (a *app) createReality(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 	if err != nil {
-		a.render(w, http.StatusUnprocessableEntity, "server", page{Title: "Server config", Active: "server", ServerJSON: "{}", Unconfigured: true, Error: err.Error()})
+		a.renderServer(w, r, http.StatusUnprocessableEntity, page{ServerJSON: "{}", Unconfigured: true, Error: err.Error()})
 		return
 	}
 	a.redirect(w, r, "/server?saved=1")
@@ -271,17 +282,10 @@ func (a *app) saveServer(w http.ResponseWriter, r *http.Request) {
 	if !parseForm(w, r) {
 		return
 	}
-	data := page{Title: "Server config", Active: "server", ServerJSON: r.PostForm.Get("server_json")}
-	render := func(status int) {
-		a.mu.RLock()
-		data.Running = a.core != nil && a.core.Running()
-		data.RuntimeError = a.runtimeError
-		a.mu.RUnlock()
-		a.render(w, status, "server", data)
-	}
+	data := page{ServerJSON: r.PostForm.Get("server_json")}
 	renderError := func(err error) {
 		data.Error = err.Error()
-		render(http.StatusUnprocessableEntity)
+		a.renderServer(w, r, http.StatusUnprocessableEntity, data)
 	}
 	if err := singbox.ValidateJSON(data.ServerJSON); err != nil {
 		renderError(err)
@@ -327,5 +331,5 @@ func (a *app) saveServer(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, "Unknown action", http.StatusBadRequest)
 		return
 	}
-	render(http.StatusOK)
+	a.renderServer(w, r, http.StatusOK, data)
 }

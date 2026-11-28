@@ -25,6 +25,25 @@ type Process struct {
 	current []byte        // config of the last successful Apply
 }
 
+// Version reads the configured executable's version without touching the running process.
+func (p *Process) Version(ctx context.Context) string {
+	ctx, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+	var output limitedOutput
+	cmd := exec.CommandContext(ctx, p.Binary, "version")
+	cmd.Stdout = &output
+	cmd.WaitDelay = 100 * time.Millisecond
+	if err := cmd.Run(); err != nil {
+		return ""
+	}
+	header, _, _ := strings.Cut(strings.TrimSpace(output.String()), "\n")
+	version, ok := strings.CutPrefix(strings.TrimSpace(header), "sing-box version ")
+	if !ok {
+		return ""
+	}
+	return version
+}
+
 // Running reports whether the child process is alive.
 func (p *Process) Running() bool {
 	if p.done == nil {

@@ -75,6 +75,7 @@ type page struct {
 	ServerJSON   string
 	Running      bool
 	RuntimeError string
+	CoreVersion  string
 	Logs         string
 	Unconfigured bool
 
