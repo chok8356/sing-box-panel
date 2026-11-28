@@ -35,7 +35,7 @@ func ClientPreset(name string, blockAds bool) (string, error) {
 	route["rules"] = rules
 	if len(sets) > 0 {
 		route["rule_set"] = sets
-		root["http_clients"] = []any{map[string]any{"tag": "rule-sets", "detour": "proxy"}}
+		root["http_clients"] = []any{map[string]any{"tag": "rule-sets"}}
 		root["experimental"] = map[string]any{"cache_file": map[string]any{"enabled": true}}
 	}
 	data, err := json.MarshalIndent(root, "", "  ")

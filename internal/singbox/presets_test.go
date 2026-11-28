@@ -26,6 +26,12 @@ func TestClientPresets(t *testing.T) {
 				t.Fatal(err)
 			}
 			tun := root["inbounds"].([]any)[0].(map[string]any)
+			if tun["stack"] != "gvisor" {
+				t.Fatalf("%s ads=%v: expected gVisor TUN stack", name, ads)
+			}
+			if (name == "russia" || ads) && !reflect.DeepEqual(root["http_clients"], []any{map[string]any{"tag": "rule-sets"}}) {
+				t.Fatalf("%s ads=%v: expected a direct rule-set HTTP client", name, ads)
+			}
 			if !reflect.DeepEqual(tun["address"], []any{"172.19.0.1/30", "fdfe:dcba:9876::1/126"}) {
 				t.Fatalf("%s ads=%v: dual-stack TUN addresses missing", name, ads)
 			}
@@ -49,7 +55,7 @@ func TestClientPresets(t *testing.T) {
 				      {"action":"route","rule_set":["geosite-category-ru"],"server":"bootstrap"}
 				    ]
 				  },
-				  "inbounds": [{"type":"tun","tag":"tun-in","address":["172.19.0.1/30","fdfe:dcba:9876::1/126"],"auto_route":true,"stack":"mixed","strict_route":true,"route_exclude_address":["127.0.0.0/8","::1/128"]}]
+			  "inbounds": [{"type":"tun","tag":"tun-in","address":["172.19.0.1/30","fdfe:dcba:9876::1/126"],"auto_route":true,"stack":"gvisor","strict_route":true,"route_exclude_address":["127.0.0.0/8","::1/128"]}]
 				}`)
 				if err != nil {
 					t.Fatal(err)
