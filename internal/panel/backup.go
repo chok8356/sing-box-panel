@@ -225,12 +225,14 @@ func readBackup(ctx context.Context, filename string, c config.Config) (map[stri
 		}
 	}
 	columns := subscriptionColumns
-	hasColumn, err := hasLastSeenColumn(ctx, db)
-	if err != nil {
-		return bad(err)
-	}
-	if !hasColumn {
-		columns = strings.TrimSuffix(columns, "last_seen_at") + "NULL"
+	for _, column := range clientActivityColumns {
+		exists, err := hasSubscriptionColumn(ctx, db, column.name)
+		if err != nil {
+			return bad(err)
+		}
+		if !exists {
+			columns = strings.Replace(columns, column.name, column.missing, 1)
+		}
 	}
 	rows, err = db.QueryContext(ctx, "SELECT "+columns+" FROM subscriptions ORDER BY id")
 	if err != nil {
@@ -251,6 +253,9 @@ func readBackup(ctx context.Context, filename string, c config.Config) (map[stri
 		}
 		if err := singbox.ValidateJSON(client.OverrideJSON); err != nil {
 			return bad(err)
+		}
+		if client.UploadBytes < 0 || client.DownloadBytes < 0 {
+			return bad(errors.New("invalid client traffic in backup"))
 		}
 		clients = append(clients, client)
 	}
@@ -282,7 +287,9 @@ func (a *app) restoreDatabase(ctx context.Context, filename string) (config.Conf
 				}
 			}
 			for _, client := range clients {
-				if _, err := tx.ExecContext(ctx, "INSERT INTO subscriptions("+subscriptionColumns+") VALUES(?,?,?,?,?,?,?,?,?)", client.ID, client.Name, client.OverrideJSON, client.Enabled, client.CreatedAt, client.UpdatedAt, client.UUID, client.Token, client.LastSeenAt); err != nil {
+				if _, err := tx.ExecContext(ctx, "INSERT INTO subscriptions("+subscriptionColumns+") VALUES(?,?,?,?,?,?,?,?,?,?,?)",
+					client.ID, client.Name, client.OverrideJSON, client.Enabled, client.CreatedAt, client.UpdatedAt,
+					client.UUID, client.Token, client.LastSeenAt, client.UploadBytes, client.DownloadBytes); err != nil {
 					return err
 				}
 			}

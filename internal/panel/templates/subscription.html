@@ -60,6 +60,20 @@
   </div>
 </form>
 
+{{if not .IsNew}}
+<section class="traffic-summary" aria-label="Traffic"{{if .Managed}} data-activity-url="{{.PanelPath}}/subscriptions/activity"{{end}}>
+  <dl data-client-id="{{.Subscription.ID}}">
+    <div><dt>Total</dt><dd data-traffic>{{.Subscription.Traffic}}</dd></div>
+    <div><dt>Download</dt><dd data-download>{{formatBytes .Subscription.DownloadBytes}}</dd></div>
+    <div><dt>Upload</dt><dd data-upload>{{formatBytes .Subscription.UploadBytes}}</dd></div>
+  </dl>
+  <form method="post" action="{{.PanelPath}}/subscriptions/{{.Subscription.ID}}/reset-traffic"
+        data-confirm="Reset the upload and download counters for this client?">
+    <button type="submit" class="button">Reset traffic</button>
+  </form>
+</section>
+{{end}}
+
 {{if .FinalJSON}}
 <section class="preview" aria-labelledby="preview-title">
   <div class="editor-heading"><h2 id="preview-title">Final JSON</h2></div>

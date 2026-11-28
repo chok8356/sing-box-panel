@@ -22,6 +22,8 @@ message ConnectionEvent {
   ConnectionEventType type = 1;
   string id = 2;
   Connection connection = 3;
+  int64 uplink_delta = 4;
+  int64 downlink_delta = 5;
   int64 closed_at = 6;
 }
 
@@ -35,4 +37,6 @@ message Connection {
   string inbound_type = 3;
   string user = 10;
   int64 closed_at = 13;
+  int64 uplink_total = 16;
+  int64 downlink_total = 17;
 }

@@ -21,26 +21,44 @@ import (
 
 // Subscription is one proxy client.
 type Subscription struct {
-	ID           int64
-	Name         string
-	OverrideJSON string // personal configuration merged with the shared config
-	UUID         string // VLESS credential
-	Token        string // secret part of the public subscription URL
-	Enabled      bool
-	CreatedAt    int64
-	UpdatedAt    int64
-	LastSeenAt   sql.NullInt64
-	Presence     string
+	ID            int64
+	Name          string
+	OverrideJSON  string // personal configuration merged with the shared config
+	UUID          string // VLESS credential
+	Token         string // secret part of the public subscription URL
+	Enabled       bool
+	CreatedAt     int64
+	UpdatedAt     int64
+	LastSeenAt    sql.NullInt64
+	UploadBytes   int64
+	DownloadBytes int64
+	Presence      string
 }
 
-const subscriptionColumns = "id, name, override_json, enabled, created_at, updated_at, uuid, token, last_seen_at"
+const subscriptionColumns = "id, name, override_json, enabled, created_at, updated_at, uuid, token, last_seen_at, upload_bytes, download_bytes"
 
 const sqliteConstraintUnique = 2067
 
 func scanSubscription(row interface{ Scan(...any) error }) (Subscription, error) {
 	var s Subscription
-	err := row.Scan(&s.ID, &s.Name, &s.OverrideJSON, &s.Enabled, &s.CreatedAt, &s.UpdatedAt, &s.UUID, &s.Token, &s.LastSeenAt)
+	err := row.Scan(&s.ID, &s.Name, &s.OverrideJSON, &s.Enabled, &s.CreatedAt, &s.UpdatedAt, &s.UUID, &s.Token, &s.LastSeenAt, &s.UploadBytes, &s.DownloadBytes)
 	return s, err
+}
+
+func (s Subscription) Traffic() string { return formatBytes(s.UploadBytes + s.DownloadBytes) }
+
+func formatBytes(bytes int64) string {
+	if bytes < 1024 {
+		return fmt.Sprintf("%d B", bytes)
+	}
+	value := float64(bytes)
+	for _, unit := range []string{"KiB", "MiB", "GiB", "TiB", "PiB", "EiB"} {
+		value /= 1024
+		if value < 1024 {
+			return fmt.Sprintf("%.1f %s", value, unit)
+		}
+	}
+	return fmt.Sprintf("%d B", bytes)
 }
 
 func (s Subscription) user() singbox.User { return singbox.User{Name: s.Name, UUID: s.UUID} }
@@ -134,6 +152,9 @@ func (a *app) editSubscription(w http.ResponseWriter, r *http.Request) {
 	data := page{Title: s.Name, Active: "subscriptions", Subscription: s}
 	if r.URL.Query().Get("saved") == "1" {
 		data.Notice = "Client saved."
+	}
+	if r.URL.Query().Get("traffic-reset") == "1" {
+		data.Notice = "Traffic counters reset."
 	}
 	a.render(w, http.StatusOK, "subscription", data)
 }

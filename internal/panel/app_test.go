@@ -381,28 +381,65 @@ func TestClientActivityFlushDuringChange(t *testing.T) {
 	a, _ := testApp(t, testConfig())
 	addClient(t, a.db, "Client", "token")
 	ctx := t.Context()
-	pending := map[string]int64{"token": 2}
+	pending := map[string]pendingActivity{"token": {seen: 2, upload: 128, download: 512}}
+	a.presence.pending = pending
 
 	err := a.mutate(ctx, func(tx *sql.Tx) error {
 		var id int64
 		if err := tx.QueryRowContext(ctx, "SELECT id FROM subscriptions WHERE name = 'Client'").Scan(&id); err != nil {
 			return err
 		}
-		a.flushLastSeen(ctx, pending)
+		a.flushActivity(ctx)
 		_, err := tx.ExecContext(ctx, "UPDATE subscriptions SET enabled = 0 WHERE id = ?", id)
 		return err
 	})
 	if err != nil {
 		t.Fatalf("save client while activity is pending: %v", err)
 	}
-	if pending["token"] != 2 {
+	if pending["token"].seen != 2 {
 		t.Fatal("activity was not retained for the next flush")
 	}
 
-	a.flushLastSeen(ctx, pending)
+	a.flushActivity(ctx)
 	client, err := scanSubscription(a.db.QueryRow("SELECT " + subscriptionColumns + " FROM subscriptions"))
-	if err != nil || client.Enabled || !client.LastSeenAt.Valid || client.LastSeenAt.Int64 != 2 || len(pending) != 0 {
+	if err != nil || client.Enabled || !client.LastSeenAt.Valid || client.LastSeenAt.Int64 != 2 ||
+		client.UploadBytes != 128 || client.DownloadBytes != 512 || len(pending) != 0 {
 		t.Fatalf("client change or activity was lost: enabled=%v, last seen=%v, err=%v", client.Enabled, client.LastSeenAt, err)
+	}
+}
+
+func TestResetClientTraffic(t *testing.T) {
+	c := testConfig()
+	a, _ := testApp(t, c)
+	addClient(t, a.db, "Client", "token")
+	addClient(t, a.db, "Other client", "other")
+	if _, err := a.db.Exec("UPDATE subscriptions SET last_seen_at = 2, upload_bytes = 100, download_bytes = 200"); err != nil {
+		t.Fatal(err)
+	}
+	a.presence.pending = map[string]pendingActivity{
+		"token": {seen: 3, upload: 50, download: 75},
+		"other": {seen: 3, upload: 10, download: 20},
+	}
+	path := testOrigin + c.PanelPath + "/subscriptions/1/reset-traffic"
+	h := a.handler()
+	unauthorized := request(t, h, "POST", path, form(), false)
+	wantStatus(t, unauthorized, http.StatusSeeOther)
+	if !strings.HasSuffix(unauthorized.Header().Get("Location"), "/login") {
+		t.Fatal("unauthenticated reset did not redirect to login")
+	}
+	reset := request(t, h, "POST", path, form(), true)
+	wantStatus(t, reset, http.StatusSeeOther)
+	if !strings.HasSuffix(reset.Header().Get("Location"), "/subscriptions/1?traffic-reset=1") {
+		t.Fatal("traffic reset did not redirect to the client card")
+	}
+	a.flushActivity(t.Context())
+	client, err := scanSubscription(a.db.QueryRow("SELECT " + subscriptionColumns + " FROM subscriptions WHERE id = 1"))
+	if err != nil || client.UploadBytes != 0 || client.DownloadBytes != 0 || client.LastSeenAt.Int64 != 3 {
+		t.Fatalf("reset did not clear only the client's traffic: %+v, %v", client, err)
+	}
+	other, err := scanSubscription(a.db.QueryRow("SELECT " + subscriptionColumns + " FROM subscriptions WHERE id = 2"))
+	if err != nil || other.UploadBytes != 110 || other.DownloadBytes != 220 {
+		t.Fatalf("reset changed another client's traffic: %+v, %v", other, err)
 	}
 }
 

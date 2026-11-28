@@ -13,6 +13,7 @@
     <span>Name</span>
     <span>Connection</span>
     <span>Last online</span>
+    <span>Traffic</span>
     <span>Access</span>
   </div>
   <ul class="client-rows" role="list"{{if .Managed}} data-activity-url="{{.PanelPath}}/subscriptions/activity"{{end}}>
@@ -26,6 +27,10 @@
       <div class="client-seen client-date">
         <span class="client-label">Last online</span>
         <span data-last-seen>{{if .LastSeenAt.Valid}}{{template "client-timestamp" (clientTime .LastSeenAt.Int64)}}{{else}}—{{end}}</span>
+      </div>
+      <div class="client-traffic">
+        <span class="client-label">Traffic</span>
+        <span data-traffic>{{.Traffic}}</span>
       </div>
       <div class="client-access">
         <span class="client-label">Access</span>

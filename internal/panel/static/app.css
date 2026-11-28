@@ -165,27 +165,28 @@ code { font: 0.75rem/1.25rem var(--font-mono); }
 
 .client-list { container-type: inline-size; border: 0.0625rem solid var(--line); border-radius: var(--radius); background: var(--surface); }
 .client-rows { margin: 0; padding: 0; list-style: none; }
-.client-grid { display: grid; grid-template-columns: minmax(0, 1fr) 6.5rem 9rem 5rem 5rem; align-items: center; gap: 0.875rem; padding-inline: 1rem; }
+.client-grid { display: grid; grid-template-columns: minmax(0, 1fr) 6.5rem 9rem 5.5rem 4rem 5rem; align-items: center; gap: 0.875rem; padding-inline: 1rem; }
 .client-list-header { padding-block: 0.625rem; color: var(--muted); font-size: 0.75rem; font-weight: 500; }
 .client-row { position: relative; padding-block: 0.375rem; border-top: 0.0625rem solid var(--line); font-size: 0.875rem; }
 .client-name { color: var(--text); font-weight: 500; text-decoration: none; overflow-wrap: anywhere; }
 .client-access, .client-date, .client-presence { color: var(--muted); }
 .client-access-state { position: relative; display: inline-flex; align-items: center; vertical-align: middle; }
 .client-date { font-size: 0.75rem; font-variant-numeric: tabular-nums; overflow-wrap: anywhere; }
+.client-traffic { font-variant-numeric: tabular-nums; }
 .client-presence.online { color: var(--success); }
 .client-name::after { content: ""; position: absolute; inset: 0; }
 .client-row .row-actions { position: relative; flex-wrap: nowrap; }
 .client-row .button { width: var(--control-height); padding: 0; border-color: transparent; }
 .client-list .empty-state { padding: 4rem 1.5rem; text-align: center; color: var(--muted); }
 
-@container (width >= 38rem) {
+@container (width >= 43rem) {
   .client-label { position: absolute; width: 0.0625rem; height: 0.0625rem; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 }
-@container (width < 38rem) {
+@container (width < 43rem) {
   .client-list-header { display: none; }
   .client-row {
     grid-template-columns: minmax(0, 1fr) 5rem;
-    grid-template-areas: "name actions" "connection connection" "seen access";
+    grid-template-areas: "name actions" "connection connection" "seen access" "traffic traffic";
     column-gap: 0.5rem;
     row-gap: 0.375rem;
     padding-block: 0.5rem 0.75rem;
@@ -197,10 +198,14 @@ code { font: 0.75rem/1.25rem var(--font-mono); }
   .client-access { grid-area: access; }
   .client-connection { grid-area: connection; }
   .client-seen { grid-area: seen; }
+  .client-traffic { grid-area: traffic; }
   .client-label { margin-inline-end: 0.25rem; color: var(--muted); font-size: 0.75rem; font-weight: 500; }
   .client-row .row-actions { grid-area: actions; }
 }
 .client-name:hover, .text-link:hover { text-decoration: underline; }
+.traffic-summary dl { display: flex; flex-wrap: wrap; gap: 0.75rem 2rem; margin: 0; }
+.traffic-summary dt { color: var(--muted); font-size: 0.75rem; }
+.traffic-summary dd { margin: 0; font-size: 1rem; font-variant-numeric: tabular-nums; }
 .url-field { width: 100%; min-width: 0; height: var(--control-height); padding: 0 0.75rem; border: 0.0625rem solid var(--control-line); border-radius: var(--radius-sm); background: var(--surface-inset); color: var(--muted); font: 0.75rem/1.25rem var(--font-mono); text-overflow: ellipsis; }
 .badge { display: inline-flex; align-items: center; justify-content: center; height: 1.5rem; padding: 0 0.5rem; border-radius: 0.5rem; background: var(--accent-surface); color: var(--muted); font-size: 0.75rem; line-height: 1rem; font-weight: 500; white-space: nowrap; }
 .badge { gap: 0.375rem; }
@@ -235,7 +240,7 @@ input[type="checkbox"]:disabled { opacity: .45; cursor: not-allowed; }
 .advanced-settings > summary .hint { margin-left: 0.5rem; font-weight: 400; }
 .advanced-settings > .editor { border: 0; border-top: 0.0625rem solid var(--line); border-radius: 0; }
 .form-actions { display: flex; flex-wrap: wrap; gap: 0.5rem; margin-top: 1.5rem; }
-.client-actions { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 0.0625rem solid var(--line); }
+.traffic-summary, .client-actions { display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem; margin-top: 1.5rem; padding-top: 1.5rem; border-top: 0.0625rem solid var(--line); }
 
 .message { position: relative; padding: 0.75rem 1rem 0.75rem 2.5rem; margin: 0 0 1.5rem; border: 0.0625rem solid; border-radius: var(--radius); font-size: 0.875rem; overflow-wrap: anywhere; }
 .message.error { background: var(--danger-surface); color: var(--danger); border-color: var(--danger-line); }

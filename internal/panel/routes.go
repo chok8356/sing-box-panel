@@ -56,6 +56,7 @@ func (a *app) routes(c config.Config) http.Handler {
 	admin.HandleFunc("POST "+p+"/subscriptions/{id}", a.saveSubscription)
 	admin.HandleFunc("POST "+p+"/subscriptions/{id}/delete", a.deleteSubscription)
 	admin.HandleFunc("POST "+p+"/subscriptions/{id}/regenerate-token", a.rotateCredential)
+	admin.HandleFunc("POST "+p+"/subscriptions/{id}/reset-traffic", a.resetTraffic)
 	admin.HandleFunc("GET "+p+"/subscriptions/{id}/preview", a.previewSubscription)
 	admin.HandleFunc("GET "+p+"/static/{file}", a.staticFile)
 	protected := http.NewCrossOriginProtection().Handler(a.adminAuth(admin, c.PanelPath))

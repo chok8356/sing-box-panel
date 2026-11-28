@@ -81,21 +81,29 @@ func initSchema(db *sql.DB) error {
 	if _, err := tx.Exec(schema); err != nil {
 		return err
 	}
-	hasColumn, err := hasLastSeenColumn(context.Background(), tx)
-	if err != nil {
-		return err
-	}
-	if !hasColumn {
-		if _, err := tx.Exec("ALTER TABLE subscriptions ADD COLUMN last_seen_at INTEGER"); err != nil {
-			return fmt.Errorf("add client activity column: %w", err)
+	for _, column := range clientActivityColumns {
+		exists, err := hasSubscriptionColumn(context.Background(), tx, column.name)
+		if err != nil {
+			return err
+		}
+		if !exists {
+			if _, err := tx.Exec("ALTER TABLE subscriptions ADD COLUMN " + column.name + " " + column.definition); err != nil {
+				return fmt.Errorf("add client activity column %s: %w", column.name, err)
+			}
 		}
 	}
 	return tx.Commit()
 }
 
-func hasLastSeenColumn(ctx context.Context, q queryer) (bool, error) {
+var clientActivityColumns = []struct{ name, definition, missing string }{
+	{"last_seen_at", "INTEGER", "NULL"},
+	{"upload_bytes", "INTEGER NOT NULL DEFAULT 0", "0"},
+	{"download_bytes", "INTEGER NOT NULL DEFAULT 0", "0"},
+}
+
+func hasSubscriptionColumn(ctx context.Context, q queryer, name string) (bool, error) {
 	var exists bool
-	err := q.QueryRowContext(ctx, "SELECT EXISTS (SELECT 1 FROM pragma_table_info('subscriptions') WHERE name = 'last_seen_at')").Scan(&exists)
+	err := q.QueryRowContext(ctx, "SELECT EXISTS (SELECT 1 FROM pragma_table_info('subscriptions') WHERE name = ?)", name).Scan(&exists)
 	return exists, err
 }
 

@@ -129,6 +129,7 @@ func (a *app) parseTemplate(name string) (*template.Template, error) {
 	return template.New("layout.html").Funcs(template.FuncMap{
 		"subscriptionURL": a.subscriptionURL,
 		"clientTime":      clientTime,
+		"formatBytes":     formatBytes,
 	}).
 		ParseFS(a.assets, "templates/layout.html", "templates/"+name+".html")
 }

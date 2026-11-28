@@ -119,6 +119,8 @@ type ConnectionEvent struct {
 	Type          ConnectionEventType    `protobuf:"varint,1,opt,name=type,proto3,enum=daemon.ConnectionEventType" json:"type,omitempty"`
 	Id            string                 `protobuf:"bytes,2,opt,name=id,proto3" json:"id,omitempty"`
 	Connection    *Connection            `protobuf:"bytes,3,opt,name=connection,proto3" json:"connection,omitempty"`
+	UplinkDelta   int64                  `protobuf:"varint,4,opt,name=uplink_delta,json=uplinkDelta,proto3" json:"uplink_delta,omitempty"`
+	DownlinkDelta int64                  `protobuf:"varint,5,opt,name=downlink_delta,json=downlinkDelta,proto3" json:"downlink_delta,omitempty"`
 	ClosedAt      int64                  `protobuf:"varint,6,opt,name=closed_at,json=closedAt,proto3" json:"closed_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -173,6 +175,20 @@ func (x *ConnectionEvent) GetConnection() *Connection {
 		return x.Connection
 	}
 	return nil
+}
+
+func (x *ConnectionEvent) GetUplinkDelta() int64 {
+	if x != nil {
+		return x.UplinkDelta
+	}
+	return 0
+}
+
+func (x *ConnectionEvent) GetDownlinkDelta() int64 {
+	if x != nil {
+		return x.DownlinkDelta
+	}
+	return 0
 }
 
 func (x *ConnectionEvent) GetClosedAt() int64 {
@@ -240,6 +256,8 @@ type Connection struct {
 	InboundType   string                 `protobuf:"bytes,3,opt,name=inbound_type,json=inboundType,proto3" json:"inbound_type,omitempty"`
 	User          string                 `protobuf:"bytes,10,opt,name=user,proto3" json:"user,omitempty"`
 	ClosedAt      int64                  `protobuf:"varint,13,opt,name=closed_at,json=closedAt,proto3" json:"closed_at,omitempty"`
+	UplinkTotal   int64                  `protobuf:"varint,16,opt,name=uplink_total,json=uplinkTotal,proto3" json:"uplink_total,omitempty"`
+	DownlinkTotal int64                  `protobuf:"varint,17,opt,name=downlink_total,json=downlinkTotal,proto3" json:"downlink_total,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -302,30 +320,48 @@ func (x *Connection) GetClosedAt() int64 {
 	return 0
 }
 
+func (x *Connection) GetUplinkTotal() int64 {
+	if x != nil {
+		return x.UplinkTotal
+	}
+	return 0
+}
+
+func (x *Connection) GetDownlinkTotal() int64 {
+	if x != nil {
+		return x.DownlinkTotal
+	}
+	return 0
+}
+
 var File_internal_singbox_connectionapi_connections_proto protoreflect.FileDescriptor
 
 const file_internal_singbox_connectionapi_connections_proto_rawDesc = "" +
 	"\n" +
 	"0internal/singbox/connectionapi/connections.proto\x12\x06daemon\"9\n" +
 	"\x1bSubscribeConnectionsRequest\x12\x1a\n" +
-	"\binterval\x18\x01 \x01(\x03R\binterval\"\xa3\x01\n" +
+	"\binterval\x18\x01 \x01(\x03R\binterval\"\xed\x01\n" +
 	"\x0fConnectionEvent\x12/\n" +
 	"\x04type\x18\x01 \x01(\x0e2\x1b.daemon.ConnectionEventTypeR\x04type\x12\x0e\n" +
 	"\x02id\x18\x02 \x01(\tR\x02id\x122\n" +
 	"\n" +
 	"connection\x18\x03 \x01(\v2\x12.daemon.ConnectionR\n" +
-	"connection\x12\x1b\n" +
+	"connection\x12!\n" +
+	"\fuplink_delta\x18\x04 \x01(\x03R\vuplinkDelta\x12%\n" +
+	"\x0edownlink_delta\x18\x05 \x01(\x03R\rdownlinkDelta\x12\x1b\n" +
 	"\tclosed_at\x18\x06 \x01(\x03R\bclosedAt\"Y\n" +
 	"\x10ConnectionEvents\x12/\n" +
 	"\x06events\x18\x01 \x03(\v2\x17.daemon.ConnectionEventR\x06events\x12\x14\n" +
-	"\x05reset\x18\x02 \x01(\bR\x05reset\"z\n" +
+	"\x05reset\x18\x02 \x01(\bR\x05reset\"\xc4\x01\n" +
 	"\n" +
 	"Connection\x12\x18\n" +
 	"\ainbound\x18\x02 \x01(\tR\ainbound\x12!\n" +
 	"\finbound_type\x18\x03 \x01(\tR\vinboundType\x12\x12\n" +
 	"\x04user\x18\n" +
 	" \x01(\tR\x04user\x12\x1b\n" +
-	"\tclosed_at\x18\r \x01(\x03R\bclosedAt*i\n" +
+	"\tclosed_at\x18\r \x01(\x03R\bclosedAt\x12!\n" +
+	"\fuplink_total\x18\x10 \x01(\x03R\vuplinkTotal\x12%\n" +
+	"\x0edownlink_total\x18\x11 \x01(\x03R\rdownlinkTotal*i\n" +
 	"\x13ConnectionEventType\x12\x18\n" +
 	"\x14CONNECTION_EVENT_NEW\x10\x00\x12\x1b\n" +
 	"\x17CONNECTION_EVENT_UPDATE\x10\x01\x12\x1b\n" +

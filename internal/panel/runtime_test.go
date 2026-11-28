@@ -258,17 +258,21 @@ func TestRealVPNLifecycle(t *testing.T) {
 			var clients map[int64]struct {
 				Status   string
 				LastSeen *time.Time
+				Upload   string
+				Download string
 			}
 			if err := json.Unmarshal(w.Body.Bytes(), &clients); err != nil {
 				t.Fatal(err)
 			}
 			for _, client := range clients {
-				if client.Status == status && (!requireLastSeen || client.LastSeen != nil) {
+				if client.Status == status && (!requireLastSeen ||
+					(client.LastSeen != nil && client.Upload != "" && client.Upload != "0 B" &&
+						client.Download != "" && client.Download != "0 B")) {
 					return
 				}
 			}
 			if time.Now().After(deadline) {
-				t.Fatalf("want %s (last online required: %v), got %s", status, requireLastSeen, body)
+				t.Fatalf("want %s (persisted activity and traffic required: %v), got %s", status, requireLastSeen, body)
 			}
 			time.Sleep(50 * time.Millisecond)
 		}
@@ -292,7 +296,7 @@ func TestRealVPNLifecycle(t *testing.T) {
 	waitForActivity("Offline", true)
 	clientsPage := request(t, h, "GET", panel+"/subscriptions", nil, true)
 	wantStatus(t, clientsPage, http.StatusOK)
-	for _, label := range []string{"Last online", "Offline", "UTC"} {
+	for _, label := range []string{"Last online", "Offline", "UTC", "Traffic"} {
 		if !strings.Contains(clientsPage.Body.String(), label) {
 			t.Fatalf("client list is missing %q", label)
 		}

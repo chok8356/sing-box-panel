@@ -31,9 +31,9 @@ document.querySelectorAll("[data-copy], [data-copy-target]").forEach(button => {
   });
 });
 
-const clientRows = document.querySelector(".client-rows");
+const clientActivity = document.querySelector("[data-activity-url]");
 const clientTimes = document.querySelectorAll("time[data-local-time]");
-if (clientRows || clientTimes.length) {
+if (clientActivity || clientTimes.length) {
   const dateFormat = new Intl.DateTimeFormat(undefined, {dateStyle: "short", timeStyle: "short"});
   const localizeTime = time => { time.textContent = dateFormat.format(new Date(time.dateTime)); };
   clientTimes.forEach(localizeTime);
@@ -41,12 +41,17 @@ if (clientRows || clientTimes.length) {
   async function refreshActivity() {
     try {
       if (document.hidden) return;
-      const response = await fetch(clientRows.dataset.activityUrl, {cache: "no-store"});
+      const response = await fetch(clientActivity.dataset.activityUrl, {cache: "no-store"});
       if (!response.ok) throw new Error("Could not refresh client activity");
       const clients = await response.json();
-      for (const row of clientRows.querySelectorAll("[data-client-id]")) {
+      for (const row of clientActivity.querySelectorAll("[data-client-id]")) {
         const client = clients[row.dataset.clientId];
+        for (const field of ["traffic", "upload", "download"]) {
+          const value = row.querySelector(`[data-${field}]`);
+          if (value && client) value.textContent = client[field];
+        }
         const status = row.querySelector("[data-presence]");
+        if (!status) continue;
         status.textContent = client?.status ?? "—";
         status.classList.toggle("online", client?.status === "Online");
         const lastSeen = row.querySelector("[data-last-seen]");
@@ -60,7 +65,7 @@ if (clientRows || clientTimes.length) {
         }
       }
     } catch {
-      for (const status of clientRows.querySelectorAll("[data-presence]")) {
+      for (const status of clientActivity.querySelectorAll("[data-presence]")) {
         if (status.textContent !== "—") status.textContent = "Unavailable";
         status.classList.remove("online");
       }
@@ -68,7 +73,7 @@ if (clientRows || clientTimes.length) {
       setTimeout(refreshActivity, 5000);
     }
   }
-  if (clientRows?.dataset.activityUrl) setTimeout(refreshActivity, 5000);
+  if (clientActivity) setTimeout(refreshActivity, 5000);
 }
 
 const logs = document.querySelector("#server-logs");

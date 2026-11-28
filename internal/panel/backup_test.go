@@ -66,7 +66,7 @@ func TestWebBackupRestoresAllSettingsAndClients(t *testing.T) {
 	if err := seedVPN(a.db, "vpn.example.com", "example.com", 443, 8443); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := a.db.Exec("UPDATE subscriptions SET override_json=?, last_seen_at=1800000000", `{"route":{"rules":[]}}`); err != nil {
+	if _, err := a.db.Exec("UPDATE subscriptions SET override_json=?, last_seen_at=1800000000, upload_bytes=1024, download_bytes=2048", `{"route":{"rules":[]}}`); err != nil {
 		t.Fatal(err)
 	}
 	before, _ := effectiveServer(t.Context(), a.db)
@@ -100,10 +100,10 @@ func TestWebBackupRestoresAllSettingsAndClients(t *testing.T) {
 		t.Fatal("client credentials/server/base configuration changed")
 	}
 	var override string
-	var sessions, lastSeen int
-	a.db.QueryRow("SELECT override_json, last_seen_at FROM subscriptions").Scan(&override, &lastSeen)
+	var sessions, lastSeen, upload, download int
+	a.db.QueryRow("SELECT override_json, last_seen_at, upload_bytes, download_bytes FROM subscriptions").Scan(&override, &lastSeen, &upload, &download)
 	a.db.QueryRow("SELECT count(*) FROM admin_sessions").Scan(&sessions)
-	if override != `{"route":{"rules":[]}}` || lastSeen != 1800000000 || sessions != 0 {
+	if override != `{"route":{"rules":[]}}` || lastSeen != 1800000000 || upload != 1024 || download != 2048 || sessions != 0 {
 		t.Fatal("override or activity lost, or sessions restored")
 	}
 	wantStatus(t, request(t, a.handler(), "POST", testOrigin+a.config().PanelPath+"/login", form("username", "admin", "password", "test-secret"), false), 303)
@@ -132,7 +132,9 @@ func TestLegacyBackupAndActivityMigration(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = legacy.Exec("ALTER TABLE subscriptions DROP COLUMN last_seen_at")
+	_, err = legacy.Exec(`ALTER TABLE subscriptions DROP COLUMN last_seen_at;
+		ALTER TABLE subscriptions DROP COLUMN upload_bytes;
+		ALTER TABLE subscriptions DROP COLUMN download_bytes`)
 	legacy.Close()
 	if err != nil {
 		t.Fatal(err)
@@ -151,7 +153,7 @@ func TestLegacyBackupAndActivityMigration(t *testing.T) {
 	}
 	client, err := scanSubscription(db.QueryRow("SELECT " + subscriptionColumns + " FROM subscriptions"))
 	if err != nil || client.ID != clients[0].ID || client.CreatedAt != 1 || client.UUID != clients[0].UUID ||
-		client.Token != clients[0].Token || client.LastSeenAt.Valid {
+		client.Token != clients[0].Token || client.LastSeenAt.Valid || client.UploadBytes != 0 || client.DownloadBytes != 0 {
 		t.Fatal("migration changed existing client data", err)
 	}
 }
