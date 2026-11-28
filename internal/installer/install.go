@@ -31,12 +31,12 @@ import (
 	"sing-box-panel/internal/panel"
 )
 
-// Pinned sing-box release; the digests come from GitHub's release page.
-const singBoxVersion = "1.14.4"
+// Use the static musl archives so NaiveProxy can run without a separate libcronet.so.
+const singBoxVersion = "1.14.6"
 
 var singBoxSHA256 = map[string]string{
-	"amd64": "699a1b510aa4396b2176d32d1181920399ebf1e267835da6f3b598d0f7c24968",
-	"arm64": "436441f76ee2f7fe21b5b2d426d3cb261a480455a704865789ad533e4273ec26",
+	"amd64": "002ddb6a750f9de0b4d3b6bfc57e4df1e94a14462754e9f3475ed3d2df95f0ab",
+	"arm64": "60c04cc75eabc33a5fa4ca48ec2a73b6276be7e2d295615cc16f516efaec0f8a",
 }
 
 var semver = regexp.MustCompile(`^v[0-9]+\.[0-9]+\.[0-9]+([.-][a-zA-Z0-9.-]+)?$`)
@@ -362,7 +362,7 @@ func ensureSingBox() error {
 	if !ok {
 		return fmt.Errorf("unsupported architecture %s; use amd64 or arm64", runtime.GOARCH)
 	}
-	name := fmt.Sprintf("sing-box-%s-linux-%s", singBoxVersion, runtime.GOARCH)
+	name := fmt.Sprintf("sing-box-%s-linux-%s-musl", singBoxVersion, runtime.GOARCH)
 	fmt.Printf("Downloading sing-box %s...\n", singBoxVersion)
 	data, err := download(fmt.Sprintf("https://github.com/SagerNet/sing-box/releases/download/v%s/%s.tar.gz",
 		singBoxVersion, name))

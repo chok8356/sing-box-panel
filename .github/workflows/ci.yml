@@ -7,7 +7,7 @@ on:
 permissions:
   contents: read
 env:
-  SING_BOX: /tmp/sing-box-1.14.4-linux-amd64/sing-box
+  SING_BOX: /tmp/sing-box-1.14.6-linux-amd64-musl/sing-box
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -20,7 +20,7 @@ jobs:
       - run: go test ./...
       - run: shellcheck install.sh
       - name: Download sing-box for integration tests
-        run: curl -fsSL https://github.com/SagerNet/sing-box/releases/download/v1.14.4/sing-box-1.14.4-linux-amd64.tar.gz | tar -xz -C /tmp
+        run: curl -fsSL https://github.com/SagerNet/sing-box/releases/download/v1.14.6/sing-box-1.14.6-linux-amd64-musl.tar.gz | tar -xz -C /tmp
       - name: Real sing-box integration
         run: SING_BOX_TEST_BINARY=$SING_BOX go test -race ./...
       - name: Installer integration (disposable root container)

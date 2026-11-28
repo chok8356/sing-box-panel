@@ -26,10 +26,10 @@ services:
 
         FROM debian:bookworm-slim
         ARG TARGETARCH
-        ARG SING_BOX_VERSION=1.14.4
-        ADD https://github.com/SagerNet/sing-box/releases/download/v$${SING_BOX_VERSION}/sing-box-$${SING_BOX_VERSION}-linux-$${TARGETARCH}.tar.gz /tmp/sing-box.tar.gz
+        ARG SING_BOX_VERSION=1.14.6
+        ADD https://github.com/SagerNet/sing-box/releases/download/v$${SING_BOX_VERSION}/sing-box-$${SING_BOX_VERSION}-linux-$${TARGETARCH}-musl.tar.gz /tmp/sing-box.tar.gz
         RUN tar -xzf /tmp/sing-box.tar.gz -C /usr/local/bin --strip-components=1 \
-              sing-box-$${SING_BOX_VERSION}-linux-$${TARGETARCH}/sing-box && rm /tmp/sing-box.tar.gz
+              sing-box-$${SING_BOX_VERSION}-linux-$${TARGETARCH}-musl/sing-box && rm /tmp/sing-box.tar.gz
         COPY --from=build /sing-box-panel /usr/local/bin/
     environment:
       DATABASE_PATH: /data/panel.db
